@@ -1,0 +1,85 @@
+.subtitle {
+  color: #666;
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.formGroup label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.formGroup input,
+.formGroup select,
+.formGroup textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.formGroup input:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.itemList {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.item {
+  background: #f9f9f9;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  padding: 15px;
+}
+
+.itemHeader {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.riskName {
+  font-weight: 500;
+  font-size: 1.05rem;
+  padding: 8px 10px !important;
+  flex: 1;
+}
+
+.itemMeta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.itemMeta input,
+.itemMeta select {
+  padding: 6px 8px !important;
+  font-size: 0.9rem;
+}
+
+.tip {
+  background: #f0f9ff;
+  border-left: 4px solid #2563eb;
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #1e40af;
+  margin-top: 20px;
+}
