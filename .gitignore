@@ -66,10 +66,8 @@ build/
 # Misc
 .cache/
 .turbo/
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
 # Project-specific
 /instructions.md
-

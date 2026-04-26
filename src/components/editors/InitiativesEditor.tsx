@@ -1,5 +1,5 @@
 import { Initiative, InitiativeStatus } from "@/types";
-import { v4 as uuidv4 } from "uuid";
+import { createId } from "@/lib/reportFactory";
 
 interface InitiativesEditorProps {
   data: Initiative[];
@@ -12,7 +12,7 @@ export default function InitiativesEditor({
 }: InitiativesEditorProps) {
   const addInitiative = () => {
     const newInitiative: Initiative = {
-      id: uuidv4(),
+      id: createId("initiative"),
       name: "",
       status: "on-track",
       progress: 0,

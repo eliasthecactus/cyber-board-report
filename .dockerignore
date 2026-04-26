@@ -1,0 +1,16 @@
+.git
+.github
+.DS_Store
+node_modules
+dist
+coverage
+.env
+.env.*
+*.log
+*.db
+*.db-shm
+*.db-wal
+tmp
+temp
+.cache
+.turbo

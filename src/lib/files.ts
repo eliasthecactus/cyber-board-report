@@ -1,0 +1,33 @@
+export function downloadJson(filename: string, data: unknown): void {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export function readJsonFile(file: File): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        resolve(JSON.parse(String(reader.result)));
+      } catch {
+        reject(new Error("The selected file is not valid JSON."));
+      }
+    };
+    reader.onerror = () => reject(reader.error || new Error("Failed to read file."));
+    reader.readAsText(file);
+  });
+}
+
+export function backupFilename(prefix = "cyber-board-reports"): string {
+  return `${prefix}-${new Date().toISOString().slice(0, 10)}.json`;
+}

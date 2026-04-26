@@ -1,165 +1,174 @@
-# IN DEVELOPMENT - DO NOT USE IN PRODUCTION - NO SECURITY AUDIT DONE - ONLY DEPLOY LOCALLY
-
----
-
 # cyber-board-report
 
-A web application for security leaders to create, manage, and present quarterly board reports. Transforms complex security data into executive-friendly slide presentations in under 30 minutes.
+A local-first web app for creating, editing, presenting, and exporting quarterly cyber security board reports.
 
-**Not a technical dashboard.** Built specifically for C-suite and board-level audiences.
+The app is now a client-only Vite/React single page app. There is no backend, no API server, no authentication service, and no database process. Report data is saved in the browser on the client side using IndexedDB, with localStorage as a fallback.
 
----
+## Local-First Model
+
+- All reports and profile settings stay in the current browser profile.
+- The built app is static HTML, CSS, and JavaScript.
+- Import and backup use JSON files that you download or select manually.
+- There is no multi-user sharing. Use JSON backup/import when you need to move data between browsers or machines.
+- Clearing browser site data removes the reports unless you have exported a backup.
 
 ## Features
 
-- **Guided report editor** — 11 structured sections with constrained inputs, no blank-page anxiety
-- **Instant slide generation** — Reports automatically render as executive presentations
-- **Risk matrix** — Interactive 4×4 likelihood × impact visualization with trend tracking
-- **KPI trend charts** — Historical quarterly data with target tracking
-- **Full-screen presentation mode** — Board-ready slideshow with keyboard navigation
-- **PDF export** — One-click download via jsPDF + html2canvas
-- **Passkey authentication** — Passwordless login using WebAuthn (no passwords stored)
-- **Multi-user support** — Each user's reports are fully isolated
-- **Report sharing** — Share any report with collaborators by username; owners can add/remove access
-- **Profile management** — Update your display name; all reports reflect changes immediately
-
----
+- Guided report editor with structured board-report sections
+- Automatic local autosave while editing
+- Dashboard for create, duplicate, delete, import, and backup
+- Slide preview and full-screen presentation mode
+- PDF export with `jsPDF` and `html2canvas-pro`
+- JSON export for all data or a single report
+- Browser-only persistence through IndexedDB
 
 ## Quick Start
 
 ### Prerequisites
-- Node.js 18+
 
-### Installation
+- Node.js 20+
+- npm 10+
+
+### Install
 
 ```bash
-git clone https://github.com/eliasthecactus/cyber-board-report
-cd cyber-board-report
 npm install
 ```
 
-### Environment
-
-Create a `.env.local` file:
-
-```env
-JWT_SECRET=your-super-secret-key-min-32-chars
-RP_ID=localhost
-ORIGIN=http://localhost:3000
-```
-
-> For production, set `RP_ID` and `ORIGIN` to your actual domain (e.g. `RP_ID=yourdomain.com`, `ORIGIN=https://yourdomain.com`).
-
-### Run
+### Run Locally
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), register with a passkey, and create your first report.
+Open the local URL printed by Vite, usually:
 
----
+```text
+http://127.0.0.1:5173
+```
+
+### Build Static Assets
+
+```bash
+npm run build
+```
+
+The production build is written to `dist/`.
+
+### Preview The Build
+
+```bash
+npm run preview
+```
+
+The app uses hash routes and relative asset paths, so it is suitable for simple local static hosting.
+
+## Docker
+
+Build the image locally:
+
+```bash
+docker build -t cyber-board-report:local .
+```
+
+Run it:
+
+```bash
+docker run --rm -p 8080:8080 cyber-board-report:local
+```
+
+Open:
+
+```text
+http://127.0.0.1:8080
+```
+
+Or use Compose:
+
+```bash
+docker compose up --build
+```
+
+The container serves the static `dist/` build with nginx on port `8080`. Report data still stays in the user's browser through IndexedDB/localStorage; the container does not store application data.
+
+## Data Backup
+
+Use **Backup** in the dashboard or profile page to download a JSON snapshot containing:
+
+- profile settings
+- all local reports
+
+Use **Import** on the dashboard to restore a snapshot or import a single exported report. If an imported report ID already exists in the browser, the app assigns a new ID to avoid overwriting existing data.
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 14 (App Router) |
+| App shell | Vite + React 18 |
 | Language | TypeScript |
 | Styling | Tailwind CSS 4 + DaisyUI 5 |
 | Charts | Recharts |
-| Auth | SimpleWebAuthn + Jose JWT |
-| Database | SQLite 3 (via `sqlite` + `sqlite3`) |
+| Persistence | IndexedDB with localStorage fallback |
 | PDF export | jsPDF + html2canvas-pro |
 | Icons | lucide-react |
 
----
-
 ## Project Structure
 
-```
+```text
 src/
-├── app/
-│   ├── api/
-│   │   ├── auth/              # register, login, logout, me, profile
-│   │   └── reports/           # CRUD + per-report share management
-│   ├── auth/                  # Passkey registration & login page
-│   ├── editor/[id]/           # Report section editor
-│   ├── slides/[id]/           # Slide preview & presentation
-│   ├── profile/               # Account settings
-│   └── page.tsx               # Dashboard (report listing)
+├── pages/                     # Client-only dashboard, editor, slides, profile
 ├── components/
-│   ├── editors/               # 12 section editor components
-│   └── slides/                # 13 slide renderer components
+│   ├── editors/               # Section editor components
+│   ├── slides/                # Slide renderer components
+│   └── ui/                    # Shared UI primitives
 ├── lib/
-│   ├── auth.ts                # JWT session helpers
-│   ├── db.ts                  # SQLite schema + connection
-│   └── reports.ts             # Report & share CRUD
-└── types.ts                   # TypeScript interfaces
+│   ├── storage.ts             # IndexedDB/localStorage persistence
+│   ├── reportFactory.ts       # Report creation and normalization
+│   ├── navigation.ts          # Hash routing
+│   └── files.ts               # JSON import/export helpers
+├── styles/
+│   └── globals.css
+├── App.tsx
+├── main.tsx
+└── types.ts
 ```
-
----
-
-## Data Model
-
-### Report (11 sections)
-
-| Section | Type |
-|---|---|
-| Executive Summary | string |
-| Top Risks | `Risk[]` (likelihood × impact × trend) |
-| Threat Landscape | string |
-| KPIs | `KPI[]` (value, target, historical data) |
-| Incidents | `Incident[]` (business impact focus) |
-| Program Status | achievements / challenges |
-| Budget & Resources | allocation breakdown |
-| Compliance & Audit | status, findings, gaps |
-| Supply Chain Risk | vendor assessment |
-| Initiatives | `Initiative[]` (status, progress, blockers) |
-| Outlook | string |
-| Decisions Required | `Decision[]` (rationale, impact) |
-
-### Sharing model
-
-- Only the **owner** can share, delete, or remove collaborators
-- **Collaborators** can view and edit; cannot delete or re-share
-- Enforced at SQL level (ownership check in every mutating query)
-
----
-
-## Security
-
-- Passwordless — credentials are WebAuthn public keys, never passwords
-- Passkey login bound to `RP_ID`/`ORIGIN` (phishing-resistant)
-- JWT stored in httpOnly cookie (not accessible to JavaScript)
-- All report queries scope to `userId` — no cross-user data leakage
-- Ownership verified before any write or delete operation
-- Generic error messages in all API 500 responses (no stack trace leakage)
-- Cascade delete: removing an account removes all credentials, sessions, and reports
-
----
 
 ## Development
 
 ```bash
-npm run dev       # dev server (http://localhost:3000)
-npm run build     # production build
-npm start         # run production build
-npx tsc --noEmit  # type check
+npm run dev        # Vite dev server
+npm run build      # Type check and production build
+npm run preview    # Serve dist locally
+npm run typecheck  # TypeScript only
 ```
 
----
+## CI, Packages, And Pages
 
+The workflow at `.github/workflows/release.yml` does the following:
 
-**Before deploying, update `.env`:**
-```env
-JWT_SECRET=<strong random secret, 32+ chars>
-RP_ID=<your domain, e.g. yourdomain.com>
-ORIGIN=<your full origin, e.g. https://yourdomain.com>
-DATABASE_URL=<absolute path to db, e.g. /data/reports.db>
+- On pull requests to `main`: installs dependencies, builds the app, and runs `npm audit --audit-level=moderate`.
+- On pushes to `main`: verifies the app, publishes a Docker image to GitHub Container Registry, and deploys the static build to GitHub Pages.
+- On semantic version tags like `v1.2.3` and published GitHub releases: verifies the app and publishes a versioned Docker image to GitHub Container Registry.
+- Publishes multi-architecture images for `linux/amd64` and `linux/arm64`.
+
+Published image name:
+
+```text
+ghcr.io/<owner>/<repo>
 ```
 
----
+Typical tags include:
+
+- `latest` for the default branch
+- the branch name
+- semantic version tags from `v1.2.3`
+- `sha-<commit>`
+
+For GitHub Pages, set the repository's Pages source to **GitHub Actions** in repository settings. The app uses hash routing and relative assets, so it works under a repository Pages path without a custom Vite base path.
+
+## Security Notes
+
+This app is designed for local deployment and local browser storage. It does not provide server-side access controls, central backups, audit logs, or collaborative permissions. Treat exported JSON/PDF files as sensitive board-report material and store them accordingly.
 
 ## License
 

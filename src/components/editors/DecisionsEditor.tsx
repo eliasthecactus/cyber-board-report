@@ -1,5 +1,5 @@
 import { Decision } from "@/types";
-import { v4 as uuidv4 } from "uuid";
+import { createId } from "@/lib/reportFactory";
 import { Plus } from "lucide-react";
 
 interface DecisionsEditorProps {
@@ -13,7 +13,7 @@ export default function DecisionsEditor({
 }: DecisionsEditorProps) {
   const addDecision = () => {
     const newDecision: Decision = {
-      id: uuidv4(),
+      id: createId("decision"),
       title: "",
       rationale: "",
       impact: "",

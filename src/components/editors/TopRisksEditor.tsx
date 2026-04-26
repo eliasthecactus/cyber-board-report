@@ -1,5 +1,5 @@
 import { Risk, Likelihood, Impact, Trend } from "@/types";
-import { v4 as uuidv4 } from "uuid";
+import { createId } from "@/lib/reportFactory";
 import { Trash2 } from "lucide-react";
 
 interface TopRisksEditorProps {
@@ -10,7 +10,7 @@ interface TopRisksEditorProps {
 export default function TopRisksEditor({ data, onUpdate }: TopRisksEditorProps) {
   const addRisk = () => {
     const newRisk: Risk = {
-      id: uuidv4(),
+      id: createId("risk"),
       name: "",
       likelihood: "low",
       businessImpact: "low",

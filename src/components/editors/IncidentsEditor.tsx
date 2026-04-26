@@ -1,5 +1,5 @@
 import { Incident } from "@/types";
-import { v4 as uuidv4 } from "uuid";
+import { createId } from "@/lib/reportFactory";
 
 interface IncidentsEditorProps {
   data: Incident[];
@@ -12,7 +12,7 @@ export default function IncidentsEditor({
 }: IncidentsEditorProps) {
   const addIncident = () => {
     const newIncident: Incident = {
-      id: uuidv4(),
+      id: createId("incident"),
       title: "",
       businessImpact: "",
       outcome: "",

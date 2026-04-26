@@ -1,5 +1,5 @@
 import { KPI, TrendDirection } from "@/types";
-import { v4 as uuidv4 } from "uuid";
+import { createId } from "@/lib/reportFactory";
 import { useState } from "react";
 
 interface KPIEditorProps {
@@ -20,7 +20,7 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
 
   const addKPI = () => {
     const newKPI: KPI = {
-      id: uuidv4(),
+      id: createId("kpi"),
       name: "",
       unit: "",
       value: 0,

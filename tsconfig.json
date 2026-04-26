@@ -16,7 +16,7 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "noEmit": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
@@ -28,19 +28,13 @@
         "src/*"
       ]
     },
-    "allowJs": true,
-    "incremental": true,
+    "allowJs": false,
     "isolatedModules": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ]
+    "types": ["vite/client"]
   },
   "include": [
     "src",
-    "next-env.d.ts",
-    ".next/types/**/*.ts"
+    "vite.config.ts"
   ],
   "exclude": [
     "node_modules"
