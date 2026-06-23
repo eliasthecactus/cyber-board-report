@@ -1,4 +1,6 @@
 import { BudgetResources } from "@/types";
+import { AiTextarea } from "@/components/ui/AiTextarea";
+import { useT } from "@/lib/i18n";
 
 interface BudgetEditorProps {
   data: BudgetResources;
@@ -6,59 +8,58 @@ interface BudgetEditorProps {
 }
 
 export default function BudgetEditor({ data, onUpdate }: BudgetEditorProps) {
+  const t = useT();
   const updateField = (field: keyof BudgetResources, value: string) => {
     onUpdate({ ...data, [field]: value });
   };
 
   return (
     <div>
-      <h2>Budget & Resources</h2>
-      <p className="text-base-content/60 text-sm mb-5">
-        Approved budget, allocation, and resource constraints
-      </p>
+      <h2>{t("ed.budget.title")}</h2>
+      <p className="text-base-content/60 text-sm mb-5">{t("ed.budget.desc")}</p>
 
       <div className="mb-5">
         <label className="label">
-          <span className="label-text">Annual Budget:</span>
+          <span className="label-text">{t("ed.budget.budgetLabel")}</span>
         </label>
-        <textarea
-          placeholder="e.g., $5M approved, breakdown by: people, tools, infrastructure"
+        <AiTextarea
+          aiLabel={t("ed.budget.budgetLabel")}
+          placeholder={t("ed.budget.budgetPlaceholder")}
           value={data.budget}
-          onChange={(e) => updateField("budget", e.target.value)}
+          onValueChange={(value) => updateField("budget", value)}
           rows={3}
-          className="textarea textarea-bordered w-full"
         />
       </div>
 
       <div className="mb-5">
         <label className="label">
-          <span className="label-text">Allocation & Staffing:</span>
+          <span className="label-text">{t("ed.budget.allocationLabel")}</span>
         </label>
-        <textarea
-          placeholder="e.g., 30 FTE, hiring status, key positions filled/unfilled"
+        <AiTextarea
+          aiLabel={t("ed.budget.allocationLabel")}
+          placeholder={t("ed.budget.allocationPlaceholder")}
           value={data.allocation}
-          onChange={(e) => updateField("allocation", e.target.value)}
+          onValueChange={(value) => updateField("allocation", value)}
           rows={3}
-          className="textarea textarea-bordered w-full"
         />
       </div>
 
       <div className="mb-5">
         <label className="label">
-          <span className="label-text">Resource Constraints:</span>
+          <span className="label-text">{t("ed.budget.constraintsLabel")}</span>
         </label>
-        <textarea
-          placeholder="e.g., skills gap, tool limitations, budget cuts needed"
+        <AiTextarea
+          aiLabel={t("ed.budget.constraintsLabel")}
+          placeholder={t("ed.budget.constraintsPlaceholder")}
           value={data.constraints}
-          onChange={(e) => updateField("constraints", e.target.value)}
+          onValueChange={(value) => updateField("constraints", value)}
           rows={3}
-          className="textarea textarea-bordered w-full"
         />
       </div>
 
       <div className="alert alert-info mt-5">
         <div>
-          <span>Tip: Be specific with numbers. Then highlight constraints that block initiatives.</span>
+          <span>{t("ed.budget.tip")}</span>
         </div>
       </div>
     </div>

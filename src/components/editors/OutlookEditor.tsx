@@ -1,32 +1,34 @@
+import { AiTextarea } from "@/components/ui/AiTextarea";
+import { useT } from "@/lib/i18n";
+
 interface OutlookEditorProps {
   data: string;
   onUpdate: (data: string) => void;
 }
 
 export default function OutlookEditor({ data, onUpdate }: OutlookEditorProps) {
+  const t = useT();
   return (
     <div>
-      <h2>Outlook & Emerging Risks</h2>
-      <p className="text-base-content/70 text-sm mb-5">
-        What to watch for next quarter. Emerging threats, planned changes, uncertainties.
-      </p>
+      <h2>{t("ed.outlook.title")}</h2>
+      <p className="text-base-content/70 text-sm mb-5">{t("ed.outlook.desc")}</p>
 
       <div className="mb-5">
         <label className="label">
-          <span className="label-text">Outlook:</span>
+          <span className="label-text">{t("ed.outlook.label")}</span>
         </label>
-        <textarea
+        <AiTextarea
           value={data}
-          onChange={(e) => onUpdate(e.target.value)}
-          placeholder="Describe what's on the horizon: new regulations, industry shifts, planned investments, organizational changes..."
+          onValueChange={onUpdate}
+          aiLabel={t("ed.outlook.title")}
+          placeholder={t("ed.outlook.placeholder")}
           rows={6}
-          className="textarea textarea-bordered w-full"
         />
       </div>
 
       <div className="alert alert-info mt-5">
         <div>
-          <span>Tip: Be forward-looking. Mention regulatory changes, M&A, new technology, etc.</span>
+          <span>{t("ed.outlook.tip")}</span>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { KPI, TrendDirection } from "@/types";
 import { createId } from "@/lib/reportFactory";
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 
 interface KPIEditorProps {
   data: KPI[];
@@ -8,6 +9,7 @@ interface KPIEditorProps {
 }
 
 export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
+  const t = useT();
   const currentYear = new Date().getFullYear();
   const quarters = [1, 2, 3, 4];
   const years = Array.from({ length: currentYear - 1999 }, (_, i) => 2000 + i);
@@ -52,10 +54,8 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
 
   return (
     <div>
-      <h2>KPIs & Metrics</h2>
-      <p className="text-base-content/70 text-sm mb-5">
-        5-8 key security metrics with quarterly trends
-      </p>
+      <h2>{t("ed.kpi.title")}</h2>
+      <p className="text-base-content/70 text-sm mb-5">{t("ed.kpi.desc")}</p>
 
       <div className="flex flex-col gap-6 mb-4">
         {kpisData.map((kpi) => (
@@ -64,21 +64,21 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
             <div className="flex gap-3 items-end mb-4">
               <input
                 type="text"
-                placeholder="KPI name"
+                placeholder={t("ed.kpi.namePlaceholder")}
                 value={kpi.name}
                 onChange={(e) => updateKPI(kpi.id, { name: e.target.value })}
                 className="input input-bordered font-semibold text-base flex-1"
               />
               <input
                 type="text"
-                placeholder="Unit (%, hours, #, etc)"
+                placeholder={t("ed.kpi.unitField")}
                 value={kpi.unit}
                 onChange={(e) => updateKPI(kpi.id, { unit: e.target.value })}
                 className="input input-bordered input-sm w-28"
               />
               <input
                 type="number"
-                placeholder="Current Value"
+                placeholder={t("ed.kpi.currentValue")}
                 value={kpi.value}
                 onChange={(e) => updateKPI(kpi.id, { value: parseFloat(e.target.value) })}
                 className="input input-bordered input-sm w-24"
@@ -90,13 +90,13 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
                 }
                 className="select select-bordered select-sm w-24"
               >
-                <option value="up">📈 Up</option>
-                <option value="stable">➡️ Stable</option>
-                <option value="down">📉 Down</option>
+                <option value="up">📈 {t("ed.kpi.up")}</option>
+                <option value="stable">➡️ {t("ed.kpi.stable")}</option>
+                <option value="down">📉 {t("ed.kpi.down")}</option>
               </select>
               <input
                 type="number"
-                placeholder="Target"
+                placeholder={t("ed.kpi.target")}
                 value={kpi.targetValue || ""}
                 onChange={(e) =>
                   updateKPI(kpi.id, { targetValue: parseFloat(e.target.value) || undefined })
@@ -109,23 +109,23 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
                   updateKPI(kpi.id, { direction: e.target.value as "higher" | "lower" })
                 }
                 className="select select-bordered select-sm w-28"
-                title="Is higher or lower better?"
+                title={t("ed.kpi.higherLowerTitle")}
               >
-                <option value="higher">⬆️ Higher Better</option>
-                <option value="lower">⬇️ Lower Better</option>
+                <option value="higher">⬆️ {t("ed.kpi.higherBetter")}</option>
+                <option value="lower">⬇️ {t("ed.kpi.lowerBetter")}</option>
               </select>
               <button
                 onClick={() => deleteKPI(kpi.id)}
                 className="btn btn-error btn-sm"
               >
-                Delete
+                {t("common.delete")}
               </button>
             </div>
 
             {/* Historical Data Section */}
             <div className="border-t border-base-300 pt-4">
               <p className="text-xs font-semibold text-base-content/60 mb-3">
-                📊 Historical Data / Trend Line
+                📊 {t("ed.kpi.historical")}
               </p>
 
               {/* Historical Data Badges */}
@@ -155,7 +155,7 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
               {/* Add Historical Data Inputs */}
               <div className="flex gap-2 items-end flex-wrap">
                 <div className="form-control flex-1 min-w-fit">
-                  <label className="label label-text label-text-sm">Quarter</label>
+                  <label className="label label-text label-text-sm">{t("ed.kpi.quarter")}</label>
                   <select
                     id={`quarter-sel-${kpi.id}`}
                     defaultValue="1"
@@ -170,7 +170,7 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
                 </div>
 
                 <div className="form-control flex-1 min-w-fit">
-                  <label className="label label-text label-text-sm">Year</label>
+                  <label className="label label-text label-text-sm">{t("ed.kpi.year")}</label>
                   <select
                     id={`year-sel-${kpi.id}`}
                     defaultValue={currentYear}
@@ -186,10 +186,10 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
                 </div>
 
                 <div className="form-control flex-1 min-w-fit">
-                  <label className="label label-text label-text-sm">Value</label>
+                  <label className="label label-text label-text-sm">{t("ed.kpi.value2")}</label>
                   <input
                     type="number"
-                    placeholder="e.g., 6.8"
+                    placeholder={t("ed.kpi.valuePlaceholder")}
                     id={`value-${kpi.id}`}
                     className="input input-bordered input-sm"
                   />
@@ -229,7 +229,7 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
                   }}
                   className="btn btn-primary btn-sm"
                 >
-                  Add Data Point
+                  {t("ed.kpi.addDataPoint")}
                 </button>
               </div>
 
@@ -249,7 +249,7 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
                       d="M12 9v2m0 4v2m0-6a4 4 0 100 8 4 4 0 000-8z"
                     ></path>
                   </svg>
-                  <span className="text-sm">This historical data is older than typical recent quarters. It may compress your chart visualization.</span>
+                  <span className="text-sm">{t("ed.kpi.oldData")}</span>
                 </div>
               )}
             </div>
@@ -258,12 +258,12 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
       </div>
 
       <button onClick={addKPI} className="btn btn-success mt-4">
-        Add KPI
+        {t("ed.kpi.add")}
       </button>
 
       <div className="alert alert-info mt-5">
         <div>
-          <span>Tip: Focus on business-relevant metrics: patch compliance %, MTTR, threat detection rate, etc.</span>
+          <span>{t("ed.kpi.tip")}</span>
         </div>
       </div>
     </div>

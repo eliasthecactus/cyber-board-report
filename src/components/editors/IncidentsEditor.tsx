@@ -1,5 +1,7 @@
 import { Incident } from "@/types";
 import { createId } from "@/lib/reportFactory";
+import { AiTextarea } from "@/components/ui/AiTextarea";
+import { useT } from "@/lib/i18n";
 
 interface IncidentsEditorProps {
   data: Incident[];
@@ -10,6 +12,7 @@ export default function IncidentsEditor({
   data,
   onUpdate,
 }: IncidentsEditorProps) {
+  const t = useT();
   const addIncident = () => {
     const newIncident: Incident = {
       id: createId("incident"),
@@ -25,8 +28,8 @@ export default function IncidentsEditor({
   const updateIncident = (id: string, updates: Partial<Incident>) => {
     onUpdate(
       data.map((incident) =>
-        incident.id === id ? { ...incident, ...updates } : incident
-      )
+        incident.id === id ? { ...incident, ...updates } : incident,
+      ),
     );
   };
 
@@ -36,10 +39,8 @@ export default function IncidentsEditor({
 
   return (
     <div>
-      <h2>Incidents & Lessons Learned</h2>
-      <p className="text-base-content/70 text-sm mb-5">
-        Major incidents from the quarter with business impact and outcomes
-      </p>
+      <h2>{t("ed.inc.title")}</h2>
+      <p className="text-base-content/70 text-sm mb-5">{t("ed.inc.desc")}</p>
 
       <div className="flex flex-col gap-4 mb-4">
         {data.map((incident) => (
@@ -47,11 +48,9 @@ export default function IncidentsEditor({
             <div className="flex gap-3 items-start">
               <input
                 type="text"
-                placeholder="Incident title"
+                placeholder={t("ed.inc.titlePlaceholder")}
                 value={incident.title}
-                onChange={(e) =>
-                  updateIncident(incident.id, { title: e.target.value })
-                }
+                onChange={(e) => updateIncident(incident.id, { title: e.target.value })}
                 className="input input-bordered font-semibold text-base flex-1"
               />
               <select
@@ -61,62 +60,60 @@ export default function IncidentsEditor({
                 }
                 className="select select-bordered w-36"
               >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
+                <option value="low">{t("ed.inc.severity.low")}</option>
+                <option value="medium">{t("ed.inc.severity.medium")}</option>
+                <option value="high">{t("ed.inc.severity.high")}</option>
+                <option value="critical">{t("ed.inc.severity.critical")}</option>
               </select>
               <button
                 onClick={() => deleteIncident(incident.id)}
                 className="btn btn-error btn-sm"
               >
-                Delete
+                {t("common.delete")}
               </button>
             </div>
 
             <div className="mt-2.5 grid gap-2.5">
               <div>
                 <label className="label">
-                  <span className="label-text font-semibold">Business Impact:</span>
+                  <span className="label-text font-semibold">{t("ed.inc.impactLabel")}</span>
                 </label>
-                <textarea
-                  placeholder="How did this affect the business?"
+                <AiTextarea
+                  aiLabel={t("ed.inc.impactLabel")}
+                  placeholder={t("ed.inc.impactPlaceholder")}
                   value={incident.businessImpact}
-                  onChange={(e) =>
-                    updateIncident(incident.id, { businessImpact: e.target.value })
+                  onValueChange={(value) =>
+                    updateIncident(incident.id, { businessImpact: value })
                   }
                   rows={2}
-                  className="textarea textarea-bordered w-full"
                 />
               </div>
 
               <div>
                 <label className="label">
-                  <span className="label-text font-semibold">Outcome:</span>
+                  <span className="label-text font-semibold">{t("ed.inc.outcomeLabel")}</span>
                 </label>
-                <textarea
-                  placeholder="How was it resolved?"
+                <AiTextarea
+                  aiLabel={t("ed.inc.outcomeLabel")}
+                  placeholder={t("ed.inc.outcomePlaceholder")}
                   value={incident.outcome}
-                  onChange={(e) =>
-                    updateIncident(incident.id, { outcome: e.target.value })
-                  }
+                  onValueChange={(value) => updateIncident(incident.id, { outcome: value })}
                   rows={2}
-                  className="textarea textarea-bordered w-full"
                 />
               </div>
 
               <div>
                 <label className="label">
-                  <span className="label-text font-semibold">Lessons Learned:</span>
+                  <span className="label-text font-semibold">{t("ed.inc.lessonsLabel")}</span>
                 </label>
-                <textarea
-                  placeholder="What did we learn? What will we do differently?"
+                <AiTextarea
+                  aiLabel={t("ed.inc.lessonsLabel")}
+                  placeholder={t("ed.inc.lessonsPlaceholder")}
                   value={incident.lessonsLearned}
-                  onChange={(e) =>
-                    updateIncident(incident.id, { lessonsLearned: e.target.value })
+                  onValueChange={(value) =>
+                    updateIncident(incident.id, { lessonsLearned: value })
                   }
                   rows={2}
-                  className="textarea textarea-bordered w-full"
                 />
               </div>
             </div>
@@ -125,12 +122,12 @@ export default function IncidentsEditor({
       </div>
 
       <button onClick={addIncident} className="btn btn-success mt-4">
-        Add Incident
+        {t("ed.inc.add")}
       </button>
 
       <div className="alert alert-info mt-5">
         <div>
-          <span>Tip: Keep descriptions business-focused. No technical jargon.</span>
+          <span>{t("ed.inc.tip")}</span>
         </div>
       </div>
     </div>

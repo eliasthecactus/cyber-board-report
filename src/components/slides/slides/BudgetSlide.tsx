@@ -1,55 +1,80 @@
 import { Report } from "@/types";
 import { DollarSign, Users, AlertCircle } from "lucide-react";
-import styles from "../SlideRenderer.module.css";
+import { useT } from "@/lib/i18n";
+import { SlideFrame } from "../SlideFrame";
+import { ACCENTS } from "../slideConstants";
 
 interface BudgetSlideProps {
   report: Report;
-  compact?: boolean;
 }
 
-export default function BudgetSlide({ report, compact: _compact = true }: BudgetSlideProps) {
+export default function BudgetSlide({ report }: BudgetSlideProps) {
+  const t = useT();
+  const accent = ACCENTS.budgetResources;
+  const { budget, allocation, constraints } = report.budgetResources;
+
+  const cards = [
+    {
+      icon: DollarSign,
+      label: t("slide.budget.budget"),
+      value: budget || t("slide.budget.notSpecified"),
+      color: "#16a34a",
+      big: true,
+    },
+    {
+      icon: Users,
+      label: t("slide.budget.allocation"),
+      value: allocation || t("slide.budget.notSpecified"),
+      color: "#2563eb",
+      big: false,
+    },
+    {
+      icon: AlertCircle,
+      label: t("slide.budget.constraints"),
+      value: constraints || t("slide.budget.noneNoted"),
+      color: constraints ? "#dc2626" : "#94a3b8",
+      big: false,
+    },
+  ];
+
   return (
-    <>
-      <h2>Budget & Resources</h2>
-      <div className={styles.content}>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-4 rounded-lg border border-green-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 bg-green-600 rounded text-white">
-                <DollarSign size={20} />
+    <SlideFrame
+      report={report}
+      accent={accent}
+      title={t("section.budgetResources")}
+      icon={DollarSign}
+    >
+      <div className="grid h-full grid-cols-3 gap-6">
+        {cards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.label}
+              className="flex flex-col rounded-2xl border border-slate-100 bg-slate-50 p-6"
+            >
+              <div className="mb-4 flex items-center gap-3">
+                <span
+                  className="flex h-11 w-11 items-center justify-center rounded-xl text-white"
+                  style={{ backgroundColor: card.color }}
+                >
+                  <Icon size={22} />
+                </span>
+                <h3 className="m-0 text-[15px] font-bold uppercase tracking-wide text-slate-500">
+                  {card.label}
+                </h3>
               </div>
-              <h3 className="m-0 text-sm font-bold uppercase tracking-wide text-gray-700">Budget</h3>
+              <p
+                className={`m-0 leading-snug text-slate-800 ${
+                  card.big ? "text-[30px] font-bold" : "text-[19px]"
+                }`}
+                style={card.big ? { color: card.color } : undefined}
+              >
+                {card.value}
+              </p>
             </div>
-            <p className="m-0 text-2xl font-bold text-green-700">
-              {report.budgetResources.budget || "Not specified"}
-            </p>
-          </div>
-
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 bg-blue-600 rounded text-white">
-                <Users size={20} />
-              </div>
-              <h3 className="m-0 text-sm font-bold uppercase tracking-wide text-gray-700">Allocation</h3>
-            </div>
-            <p className="m-0 text-sm leading-relaxed text-gray-800">
-              {report.budgetResources.allocation || "Not specified"}
-            </p>
-          </div>
-
-          <div className={`bg-gradient-to-br ${report.budgetResources.constraints ? "from-red-50 to-orange-50" : "from-gray-50 to-gray-100"} p-4 rounded-lg border ${report.budgetResources.constraints ? "border-red-200" : "border-gray-200"} shadow-sm`}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`p-2 ${report.budgetResources.constraints ? "bg-red-600" : "bg-gray-600"} rounded text-white`}>
-                <AlertCircle size={20} />
-              </div>
-              <h3 className="m-0 text-sm font-bold uppercase tracking-wide text-gray-700">Constraints</h3>
-            </div>
-            <p className={`m-0 text-sm leading-relaxed ${report.budgetResources.constraints ? "text-red-800 font-semibold" : "text-gray-600"}`}>
-              {report.budgetResources.constraints || "None noted"}
-            </p>
-          </div>
-        </div>
+          );
+        })}
       </div>
-    </>
+    </SlideFrame>
   );
 }

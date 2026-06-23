@@ -31,6 +31,8 @@ import ThreatLandscapeEditor from "@/components/editors/ThreatLandscapeEditor";
 import TopRisksEditor from "@/components/editors/TopRisksEditor";
 import { navigateTo } from "@/lib/navigation";
 import { getReport, saveReport } from "@/lib/storage";
+import { useT } from "@/lib/i18n";
+import { ReportContextProvider, serializeReportForAi } from "@/lib/reportContext";
 
 interface ReportEditorPageProps {
   reportId: string;
@@ -38,22 +40,23 @@ interface ReportEditorPageProps {
 
 type SaveState = "saved" | "saving" | "unsaved" | "error";
 
-const sections: { id: ReportSection; label: string; Icon: typeof FileText }[] = [
-  { id: "executiveSummary", label: "Executive Summary", Icon: FileText },
-  { id: "topRisks", label: "Top Risks", Icon: AlertTriangle },
-  { id: "threatLandscape", label: "Threat Landscape", Icon: Globe },
-  { id: "kpis", label: "KPIs", Icon: BarChart3 },
-  { id: "incidents", label: "Incidents", Icon: AlertCircle },
-  { id: "programStatus", label: "Program Status", Icon: CheckCircle },
-  { id: "budgetResources", label: "Budget & Resources", Icon: DollarSign },
-  { id: "complianceAudit", label: "Compliance & Audit", Icon: ScrollText },
-  { id: "supplyChainRisk", label: "Supply Chain Risk", Icon: Link2 },
-  { id: "initiatives", label: "Initiatives", Icon: Target },
-  { id: "outlook", label: "Outlook", Icon: Eye },
-  { id: "decisionsRequired", label: "Decisions Required", Icon: Handshake },
+const sections: { id: ReportSection; labelKey: string; Icon: typeof FileText }[] = [
+  { id: "executiveSummary", labelKey: "section.executiveSummary", Icon: FileText },
+  { id: "topRisks", labelKey: "section.topRisks", Icon: AlertTriangle },
+  { id: "threatLandscape", labelKey: "section.threatLandscape", Icon: Globe },
+  { id: "kpis", labelKey: "section.kpis", Icon: BarChart3 },
+  { id: "incidents", labelKey: "section.incidents", Icon: AlertCircle },
+  { id: "programStatus", labelKey: "section.programStatus", Icon: CheckCircle },
+  { id: "budgetResources", labelKey: "section.budgetResources", Icon: DollarSign },
+  { id: "complianceAudit", labelKey: "section.complianceAudit", Icon: ScrollText },
+  { id: "supplyChainRisk", labelKey: "section.supplyChainRisk", Icon: Link2 },
+  { id: "initiatives", labelKey: "section.initiatives", Icon: Target },
+  { id: "outlook", labelKey: "section.outlook", Icon: Eye },
+  { id: "decisionsRequired", labelKey: "section.decisionsRequired", Icon: Handshake },
 ];
 
 export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
+  const t = useT();
   const [report, setReport] = useState<Report | null>(null);
   const [activeSection, setActiveSection] = useState<ReportSection>("executiveSummary");
   const [loading, setLoading] = useState(true);
@@ -153,9 +156,9 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
     return (
       <main className="app-shell flex min-h-screen items-center justify-center p-6">
         <section className="w-full max-w-md rounded-lg border border-base-300 bg-base-100 p-6 shadow-sm">
-          <h1 className="mb-3 text-xl font-bold">Report not found</h1>
+          <h1 className="mb-3 text-xl font-bold">{t("editor.reportNotFound")}</h1>
           <button className="btn btn-primary" onClick={() => navigateTo("/")}>
-            Back to dashboard
+            {t("notFound.back")}
           </button>
         </section>
       </main>
@@ -172,10 +175,10 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
             </button>
             <div className="min-w-0">
               <h1 className="truncate text-lg font-bold">
-                {report.quarter} {report.year} Board Report
+                {t("editor.boardReport", { quarter: report.quarter, year: report.year })}
               </h1>
               <p className="text-xs text-base-content/60">
-                Updated {new Date(report.updatedAt).toLocaleString()}
+                {t("editor.updated", { date: new Date(report.updatedAt).toLocaleString() })}
               </p>
             </div>
           </div>
@@ -184,21 +187,21 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
               className={`btn btn-sm gap-2 ${saveButtonClass(saveState)}`}
               onClick={() => void handleSaveNow()}
               disabled={saveState === "saving"}
-              title={saveButtonTitle(saveState)}
+              title={t(`editor.saveTitle.${saveState}`)}
             >
               {saveState === "saving" ? (
                 <span className="loading loading-spinner loading-sm" />
               ) : (
                 <Save size={16} />
               )}
-              {saveButtonLabel(saveState)}
+              {t(`editor.save.${saveState}`)}
             </button>
             <button
               className="btn btn-ghost btn-sm gap-2"
               onClick={() => navigateTo(`/slides/${encodeURIComponent(report.id)}`)}
             >
               <Play size={16} />
-              Preview
+              {t("editor.preview")}
             </button>
           </div>
         </div>
@@ -209,7 +212,7 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
           <nav className="rounded-lg border border-base-300 bg-base-100 p-3 shadow-sm">
             <div className="mb-3 border-b border-base-300 pb-3">
               <p className="text-xs font-semibold uppercase text-base-content/50">
-                Report sections
+                {t("editor.reportSections")}
               </p>
             </div>
             <div className="grid gap-1">
@@ -225,7 +228,7 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
                     }`}
                   >
                     <Icon size={17} />
-                    <span className="truncate text-left">{section.label}</span>
+                    <span className="truncate text-left">{t(section.labelKey)}</span>
                   </button>
                 );
               })}
@@ -236,11 +239,16 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
         <section className="min-w-0 rounded-lg border border-base-300 bg-base-100 p-4 shadow-sm sm:p-6">
           <div className="mb-6 flex items-center justify-between gap-3 border-b border-base-300 pb-4">
             <div>
-              <p className="text-xs font-semibold uppercase text-base-content/50">Editing</p>
-              <h2 className="text-xl font-bold">{activeSectionMeta?.label}</h2>
+              <p className="text-xs font-semibold uppercase text-base-content/50">
+                {t("editor.editing")}
+              </p>
+              <h2 className="text-xl font-bold">
+                {activeSectionMeta ? t(activeSectionMeta.labelKey) : ""}
+              </h2>
             </div>
           </div>
 
+          <ReportContextProvider getContext={() => serializeReportForAi(report)}>
           {activeSection === "executiveSummary" && (
             <ExecutiveSummaryEditor
               data={report.executiveSummary}
@@ -313,21 +321,11 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
               onUpdate={(data) => handleSectionUpdate("decisionsRequired", data)}
             />
           )}
+          </ReportContextProvider>
         </section>
       </section>
     </main>
   );
-}
-
-function saveButtonLabel(state: SaveState): string {
-  const labelByState: Record<SaveState, string> = {
-    saved: "Saved",
-    saving: "Saving",
-    unsaved: "Save changes",
-    error: "Retry save",
-  };
-
-  return labelByState[state];
 }
 
 function saveButtonClass(state: SaveState): string {
@@ -340,15 +338,4 @@ function saveButtonClass(state: SaveState): string {
   }
 
   return "btn-primary";
-}
-
-function saveButtonTitle(state: SaveState): string {
-  const titleByState: Record<SaveState, string> = {
-    saved: "All changes are saved in this browser",
-    saving: "Saving changes to this browser",
-    unsaved: "Save pending changes now",
-    error: "The last save failed. Try again.",
-  };
-
-  return titleByState[state];
 }

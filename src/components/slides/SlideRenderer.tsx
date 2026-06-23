@@ -1,5 +1,7 @@
 import { Report } from "@/types";
-import styles from "./SlideRenderer.module.css";
+import { useT } from "@/lib/i18n";
+import { SlidePageContext } from "./SlideFrame";
+import { TOTAL_SLIDES } from "./slideConstants";
 import TitleSlide from "./slides/TitleSlide";
 import ExecutiveSummarySlide from "./slides/ExecutiveSummarySlide";
 import TopRisksSlide from "./slides/TopRisksSlide";
@@ -17,31 +19,29 @@ import DecisionsSlide from "./slides/DecisionsSlide";
 interface SlideRendererProps {
   report: Report;
   slideIndex: number;
-  compact?: boolean; // true = fixed aspect ratio (crop content), false = full page (scroll)
 }
 
-export default function SlideRenderer({ report, slideIndex, compact = true }: SlideRendererProps) {
+export default function SlideRenderer({ report, slideIndex }: SlideRendererProps) {
+  const t = useT();
   const slides = [
-    <TitleSlide key="title" report={report} compact={compact} />,
-    <ExecutiveSummarySlide key="exec" report={report} compact={compact} />,
-    <TopRisksSlide key="risks" report={report} compact={compact} />,
-    <ThreatLandscapeSlide key="threat" report={report} compact={compact} />,
-    <KPISlide key="kpi" report={report} compact={compact} />,
-    <IncidentsSlide key="incidents" report={report} compact={compact} />,
-    <ProgramStatusSlide key="program" report={report} compact={compact} />,
-    <BudgetSlide key="budget" report={report} compact={compact} />,
-    <ComplianceSlide key="compliance" report={report} compact={compact} />,
-    <SupplyChainSlide key="supply" report={report} compact={compact} />,
-    <InitiativesSlide key="initiatives" report={report} compact={compact} />,
-    <OutlookSlide key="outlook" report={report} compact={compact} />,
-    <DecisionsSlide key="decisions" report={report} compact={compact} />,
+    <TitleSlide key="title" report={report} />,
+    <ExecutiveSummarySlide key="exec" report={report} />,
+    <TopRisksSlide key="risks" report={report} />,
+    <ThreatLandscapeSlide key="threat" report={report} />,
+    <KPISlide key="kpi" report={report} />,
+    <IncidentsSlide key="incidents" report={report} />,
+    <ProgramStatusSlide key="program" report={report} />,
+    <BudgetSlide key="budget" report={report} />,
+    <ComplianceSlide key="compliance" report={report} />,
+    <SupplyChainSlide key="supply" report={report} />,
+    <InitiativesSlide key="initiatives" report={report} />,
+    <OutlookSlide key="outlook" report={report} />,
+    <DecisionsSlide key="decisions" report={report} />,
   ];
 
   return (
-    <div className={styles.slideWrapper}>
-      <div className={styles.slide}>
-        {slides[slideIndex] || <div>Slide not found</div>}
-      </div>
-    </div>
+    <SlidePageContext.Provider value={{ page: slideIndex + 1, total: TOTAL_SLIDES }}>
+      {slides[slideIndex] || <div>{t("slide.notFound")}</div>}
+    </SlidePageContext.Provider>
   );
 }

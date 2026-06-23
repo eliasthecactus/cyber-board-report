@@ -15,6 +15,7 @@ import type { Report } from "@/types";
 import { backupFilename, downloadJson, readJsonFile } from "@/lib/files";
 import { createEmptyReport, cloneReport } from "@/lib/reportFactory";
 import { navigateTo } from "@/lib/navigation";
+import { useT } from "@/lib/i18n";
 import {
   deleteReport,
   exportSnapshot,
@@ -36,6 +37,7 @@ const initialFormState = (): CreateFormState => ({
 });
 
 export default function DashboardPage() {
+  const t = useT();
   const [reports, setReports] = useState<Report[]>([]);
   const [profile, setProfile] = useState<LocalProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,11 @@ export default function DashboardPage() {
   };
 
   const handleDelete = async (report: Report) => {
-    if (!window.confirm(`Delete ${report.quarter} ${report.year}? This removes it from this browser.`)) {
+    if (
+      !window.confirm(
+        t("dashboard.deleteConfirm", { quarter: report.quarter, year: report.year }),
+      )
+    ) {
       return;
     }
 
@@ -99,7 +105,7 @@ export default function DashboardPage() {
     await saveReport(duplicate);
     setReports(await listReports());
     setBusyReportId(null);
-    setMessage(`Duplicated ${report.quarter} ${report.year}.`);
+    setMessage(t("dashboard.duplicated", { quarter: report.quarter, year: report.year }));
   };
 
   const handleExportAll = async () => {
@@ -124,11 +130,13 @@ export default function DashboardPage() {
       const payload = await readJsonFile(file);
       const result = await importSnapshotPayload(payload);
       setMessage(
-        `Imported ${result.reportsImported} report${result.reportsImported === 1 ? "" : "s"}.`,
+        result.reportsImported === 1
+          ? t("dashboard.importedOne")
+          : t("dashboard.importedMany", { count: result.reportsImported }),
       );
       await refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Import failed.");
+      setMessage(error instanceof Error ? error.message : t("dashboard.importFailed"));
     } finally {
       event.target.value = "";
     }
@@ -137,7 +145,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <main className="app-shell flex min-h-screen items-center justify-center">
-        <span className="loading loading-spinner loading-lg" aria-label="Loading" />
+        <span className="loading loading-spinner loading-lg" aria-label={t("common.loading")} />
       </main>
     );
   }
@@ -147,12 +155,12 @@ export default function DashboardPage() {
       <header className="border-b border-base-300 bg-base-100/95">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <button className="btn btn-ghost px-2 text-xl font-bold" onClick={() => navigateTo("/")}>
-            Cyber Board Reports
+            {t("dashboard.brand")}
           </button>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <span className="hidden items-center gap-2 rounded border border-base-300 px-3 py-2 text-sm text-base-content/70 sm:flex">
               <HardDrive size={16} />
-              Local browser storage
+              {t("dashboard.localStorage")}
             </span>
             <input
               ref={importInputRef}
@@ -166,15 +174,15 @@ export default function DashboardPage() {
               onClick={() => importInputRef.current?.click()}
             >
               <Upload size={16} />
-              Import
+              {t("common.import")}
             </button>
             <button className="btn btn-outline btn-sm gap-2" onClick={handleExportAll}>
               <Download size={16} />
-              Backup
+              {t("common.backup")}
             </button>
             <button className="btn btn-ghost btn-sm gap-2" onClick={() => navigateTo("/profile")}>
               <Settings size={16} />
-              Profile
+              {t("dashboard.settings")}
             </button>
           </div>
         </div>
@@ -183,14 +191,14 @@ export default function DashboardPage() {
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-base-content">Reports Dashboard</h1>
+            <h1 className="text-3xl font-bold text-base-content">{t("dashboard.heading")}</h1>
             <p className="mt-1 text-sm text-base-content/60">
-              Signed in locally as {profile?.displayName || "Local User"}.
+              {t("dashboard.signedInAs", { name: profile?.displayName || "Local User" })}
             </p>
           </div>
           <button className="btn btn-primary gap-2" onClick={() => setShowCreateDialog(true)}>
             <Plus size={18} />
-            Create report
+            {t("dashboard.createReport")}
           </button>
         </div>
 
@@ -198,7 +206,7 @@ export default function DashboardPage() {
           <div className="alert mb-5 flex items-center justify-between border border-base-300 bg-base-100">
             <span>{message}</span>
             <button className="btn btn-ghost btn-sm" onClick={() => setMessage(null)}>
-              Dismiss
+              {t("dashboard.dismiss")}
             </button>
           </div>
         )}
@@ -206,18 +214,18 @@ export default function DashboardPage() {
         {reports.length === 0 ? (
           <section className="rounded-lg border border-dashed border-base-300 bg-base-100 p-8 text-center">
             <FileJson className="mx-auto mb-3 text-base-content/40" size={36} />
-            <h2 className="text-xl font-semibold">No reports in this browser</h2>
+            <h2 className="text-xl font-semibold">{t("dashboard.noReports")}</h2>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               <button className="btn btn-primary gap-2" onClick={() => setShowCreateDialog(true)}>
                 <Plus size={18} />
-                Create report
+                {t("dashboard.createReport")}
               </button>
               <button
                 className="btn btn-outline gap-2"
                 onClick={() => importInputRef.current?.click()}
               >
                 <Upload size={18} />
-                Import backup
+                {t("dashboard.importBackup")}
               </button>
             </div>
           </section>
@@ -234,7 +242,9 @@ export default function DashboardPage() {
                       {report.quarter} {report.year}
                     </h2>
                     <p className="text-sm text-base-content/60">
-                      Updated {new Date(report.updatedAt).toLocaleString()}
+                      {t("dashboard.updated", {
+                        date: new Date(report.updatedAt).toLocaleString(),
+                      })}
                     </p>
                   </div>
                   <span className="badge badge-outline shrink-0">{report.createdBy}</span>
@@ -242,15 +252,15 @@ export default function DashboardPage() {
 
                 <dl className="mb-5 grid grid-cols-3 gap-2 text-sm">
                   <div className="rounded border border-base-300 p-2">
-                    <dt className="text-base-content/50">Risks</dt>
+                    <dt className="text-base-content/50">{t("dashboard.risks")}</dt>
                     <dd className="font-semibold">{report.topRisks.length}</dd>
                   </div>
                   <div className="rounded border border-base-300 p-2">
-                    <dt className="text-base-content/50">KPIs</dt>
+                    <dt className="text-base-content/50">{t("dashboard.kpis")}</dt>
                     <dd className="font-semibold">{report.kpis.length}</dd>
                   </div>
                   <div className="rounded border border-base-300 p-2">
-                    <dt className="text-base-content/50">Decisions</dt>
+                    <dt className="text-base-content/50">{t("dashboard.decisions")}</dt>
                     <dd className="font-semibold">{report.decisionsRequired.length}</dd>
                   </div>
                 </dl>
@@ -261,18 +271,18 @@ export default function DashboardPage() {
                     onClick={() => navigateTo(`/editor/${encodeURIComponent(report.id)}`)}
                   >
                     <Edit2 size={15} />
-                    Edit
+                    {t("dashboard.edit")}
                   </button>
                   <button
                     className="btn btn-primary btn-sm gap-1"
                     onClick={() => navigateTo(`/slides/${encodeURIComponent(report.id)}`)}
                   >
                     <Play size={15} />
-                    View
+                    {t("dashboard.view")}
                   </button>
                   <button
                     className="btn btn-ghost btn-sm"
-                    title="Duplicate"
+                    title={t("dashboard.duplicate")}
                     onClick={() => void handleDuplicate(report)}
                     disabled={busyReportId === report.id}
                   >
@@ -280,14 +290,14 @@ export default function DashboardPage() {
                   </button>
                   <button
                     className="btn btn-ghost btn-sm"
-                    title="Export report"
+                    title={t("dashboard.exportReport")}
                     onClick={() => handleExportReport(report)}
                   >
                     <Download size={15} />
                   </button>
                   <button
                     className="btn btn-ghost btn-sm text-error"
-                    title="Delete"
+                    title={t("common.delete")}
                     onClick={() => void handleDelete(report)}
                     disabled={busyReportId === report.id}
                   >
@@ -307,11 +317,11 @@ export default function DashboardPage() {
       {showCreateDialog && (
         <div className="modal modal-open">
           <div className="modal-box w-full max-w-md rounded-lg">
-            <h2 className="mb-4 text-2xl font-semibold">Create New Report</h2>
+            <h2 className="mb-4 text-2xl font-semibold">{t("dashboard.createNewReport")}</h2>
             <form onSubmit={handleCreateReport} className="space-y-4">
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Quarter</span>
+                  <span className="label-text">{t("dashboard.quarter")}</span>
                 </label>
                 <select
                   value={formData.quarter}
@@ -321,7 +331,7 @@ export default function DashboardPage() {
                   required
                   className="select select-bordered w-full"
                 >
-                  <option value="">Select a quarter</option>
+                  <option value="">{t("dashboard.selectQuarter")}</option>
                   <option value="Q1">Q1</option>
                   <option value="Q2">Q2</option>
                   <option value="Q3">Q3</option>
@@ -331,7 +341,7 @@ export default function DashboardPage() {
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Year</span>
+                  <span className="label-text">{t("dashboard.year")}</span>
                 </label>
                 <input
                   type="number"
@@ -352,16 +362,16 @@ export default function DashboardPage() {
                   className="btn btn-ghost"
                   onClick={() => setShowCreateDialog(false)}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={!formData.quarter}>
-                  Create
+                  {t("dashboard.create")}
                 </button>
               </div>
             </form>
           </div>
           <form method="dialog" className="modal-backdrop">
-            <button onClick={() => setShowCreateDialog(false)}>close</button>
+            <button onClick={() => setShowCreateDialog(false)}>{t("common.close")}</button>
           </form>
         </div>
       )}

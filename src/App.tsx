@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { AlertTriangle } from "lucide-react";
 import { navigateTo, useHashRoute } from "@/lib/navigation";
+import { useT } from "@/lib/i18n";
 
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const ReportEditorPage = lazy(() => import("@/pages/ReportEditorPage"));
@@ -9,6 +10,7 @@ const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 
 export default function App() {
   const route = useHashRoute();
+  const t = useT();
 
   if (route.name === "dashboard") {
     return (
@@ -47,10 +49,10 @@ export default function App() {
       <section className="w-full max-w-md rounded-lg border border-base-300 bg-base-100 p-6 shadow-sm">
         <div className="mb-4 flex items-center gap-3">
           <AlertTriangle className="text-warning" size={24} />
-          <h1 className="text-xl font-bold">Page not found</h1>
+          <h1 className="text-xl font-bold">{t("notFound.title")}</h1>
         </div>
         <button className="btn btn-primary" onClick={() => navigateTo("/")}>
-          Back to dashboard
+          {t("notFound.back")}
         </button>
       </section>
     </main>

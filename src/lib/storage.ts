@@ -1,12 +1,15 @@
-import type { Report } from "@/types";
+import type { AppSettings, Report } from "@/types";
 import { createId, normalizeReport, reportSortValue } from "@/lib/reportFactory";
+import { normalizeSettings } from "@/lib/settingsDefaults";
 
 const DB_NAME = "cyber-board-reports-local";
 const DB_VERSION = 1;
 const REPORT_STORE = "reports";
 const SETTINGS_STORE = "settings";
 const PROFILE_KEY = "profile";
+const SETTINGS_KEY = "app-settings";
 const FALLBACK_KEY = "cyber-board-reports:fallback:v1";
+const SETTINGS_FALLBACK_KEY = "cyber-board-reports:settings:v1";
 const SNAPSHOT_VERSION = 1;
 
 export interface LocalProfile {
@@ -310,6 +313,34 @@ export async function saveProfile(profile: LocalProfile): Promise<LocalProfile> 
   return normalized;
 }
 
+function readFallbackSettings(): AppSettings {
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_FALLBACK_KEY);
+    return normalizeSettings(raw ? (JSON.parse(raw) as Partial<AppSettings>) : null);
+  } catch {
+    return normalizeSettings(null);
+  }
+}
+
+export async function getSettings(): Promise<AppSettings> {
+  const stored = await useStorage(
+    () => idbGetSetting<AppSettings>(SETTINGS_KEY),
+    () => readFallbackSettings(),
+  );
+  return normalizeSettings(stored);
+}
+
+export async function saveSettings(settings: AppSettings): Promise<AppSettings> {
+  const normalized = normalizeSettings({ ...settings, updatedAt: new Date().toISOString() });
+
+  await useStorage(
+    () => idbSaveSetting(SETTINGS_KEY, normalized),
+    () => window.localStorage.setItem(SETTINGS_FALLBACK_KEY, JSON.stringify(normalized)),
+  );
+
+  return normalized;
+}
+
 export async function renameReportAuthor(oldName: string, newName: string): Promise<void> {
   const reports = await listReports();
   await Promise.all(
@@ -333,6 +364,7 @@ export async function clearLocalData(): Promise<void> {
     },
   );
   window.localStorage.removeItem(FALLBACK_KEY);
+  window.localStorage.removeItem(SETTINGS_FALLBACK_KEY);
 }
 
 export async function exportSnapshot(): Promise<AppSnapshot> {

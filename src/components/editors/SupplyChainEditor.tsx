@@ -1,5 +1,7 @@
 import { SupplyChainRisk } from "@/types";
 import { Plus } from "lucide-react";
+import { AiTextarea } from "@/components/ui/AiTextarea";
+import { useT } from "@/lib/i18n";
 
 interface SupplyChainEditorProps {
   data: SupplyChainRisk;
@@ -10,7 +12,8 @@ export default function SupplyChainEditor({
   data,
   onUpdate,
 }: SupplyChainEditorProps) {
-  const updateField = (field: keyof SupplyChainRisk, value: any) => {
+  const t = useT();
+  const updateField = (field: keyof SupplyChainRisk, value: string[] | string) => {
     onUpdate({ ...data, [field]: value });
   };
 
@@ -27,57 +30,55 @@ export default function SupplyChainEditor({
   const removeRisk = (index: number) => {
     updateField(
       "risks",
-      data.risks.filter((_, i) => i !== index)
+      data.risks.filter((_, i) => i !== index),
     );
   };
 
   return (
     <div>
-      <h2>Third-Party / Supply Chain Risk</h2>
-      <p className="text-base-content/70 text-sm mb-5">
-        Vendor risks, third-party security posture, dependencies
-      </p>
+      <h2>{t("ed.supply.title")}</h2>
+      <p className="text-base-content/70 text-sm mb-5">{t("ed.supply.desc")}</p>
 
       <div className="mb-5">
         <label className="label">
-          <span className="label-text">Key Supply Chain Risks:</span>
+          <span className="label-text">{t("ed.supply.risksLabel")}</span>
         </label>
         {data.risks.map((risk, idx) => (
           <div key={idx} className="flex gap-2.5 mb-2.5">
             <input
               type="text"
-              placeholder="Risk..."
+              placeholder={t("ed.supply.riskItem")}
               value={risk}
               onChange={(e) => updateRisk(idx, e.target.value)}
               className="input input-bordered flex-1"
             />
             <button className="btn btn-error btn-sm" onClick={() => removeRisk(idx)}>
-              Remove
+              {t("common.remove")}
             </button>
           </div>
         ))}
         <button onClick={addRisk} className="btn btn-success btn-sm">
           <Plus size={16} className="mr-1" />
-          Add Risk
+          {t("ed.supply.addRisk")}
         </button>
       </div>
 
       <div className="mb-5">
         <label className="label">
-          <span className="label-text">Overall Assessment:</span>
+          <span className="label-text">{t("ed.supply.assessmentLabel")}</span>
         </label>
-        <textarea
-          placeholder="Summary of third-party security program, vendor management, monitoring..."
+        <AiTextarea
+          aiLabel={t("ed.supply.assessmentLabel")}
+          placeholder={t("ed.supply.assessmentPlaceholder")}
           value={data.assessment}
-          onChange={(e) => updateField("assessment", e.target.value)}
+          onValueChange={(value) => updateField("assessment", value)}
           rows={4}
-          className="textarea textarea-bordered w-full"
         />
       </div>
 
       <div className="alert alert-info mt-5">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        <span>Highlight vendors with elevated risk or SLAs at risk.</span>
+        <span>{t("ed.supply.tip")}</span>
       </div>
     </div>
   );

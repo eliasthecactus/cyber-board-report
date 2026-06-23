@@ -9,23 +9,29 @@ import {
   X,
 } from "lucide-react";
 import SlideRenderer from "@/components/slides/SlideRenderer";
+import { SlideStage } from "@/components/slides/SlideStage";
+import { SLIDE_HEIGHT, SLIDE_WIDTH, TOTAL_SLIDES } from "@/components/slides/slideConstants";
 import type { Report } from "@/types";
 import { navigateTo } from "@/lib/navigation";
 import { getReport } from "@/lib/storage";
+import { useT } from "@/lib/i18n";
 
 interface SlidesViewerPageProps {
   reportId: string;
 }
 
-const totalSlides = 13;
+const totalSlides = TOTAL_SLIDES;
 
 export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
+  const t = useT();
   const [report, setReport] = useState<Report | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isPresenting, setIsPresenting] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const slideRef = useRef<HTMLDivElement>(null);
+  // Index of the slide currently rendered (full-size, off-screen) for PDF capture.
+  const [exportSlide, setExportSlide] = useState<number | null>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,7 +69,7 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
   }, []);
 
   const exportToPDF = async () => {
-    if (!report || !slideRef.current) {
+    if (!report) {
       return;
     }
 
@@ -74,50 +80,50 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
         import("jspdf"),
       ]);
 
+      // Make sure the embedded font is loaded before rasterizing any slide.
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+
       const pdf = new jsPDF({
         orientation: "landscape",
-        unit: "mm",
-        format: "a4",
+        unit: "px",
+        format: [SLIDE_WIDTH, SLIDE_HEIGHT],
       });
 
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
       for (let slideIndex = 0; slideIndex < totalSlides; slideIndex += 1) {
-        if (slideIndex > 0) {
-          pdf.addPage();
-        }
+        // Render the full-size (1280x720) slide off-screen, then wait for paint.
+        setExportSlide(slideIndex);
+        await new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve(null))),
+        );
+        await new Promise((resolve) => window.setTimeout(resolve, 250));
 
-        setCurrentSlide(slideIndex);
-        await new Promise((resolve) => window.setTimeout(resolve, 750));
-
-        const slidePreview = slideRef.current.querySelector(
-          "[data-slide-preview]",
-        ) as HTMLElement | null;
-        if (!slidePreview) {
+        const slideEl = exportRef.current?.firstElementChild as HTMLElement | null;
+        if (!slideEl) {
           continue;
         }
 
-        const canvas = await html2canvas(slidePreview, {
+        const canvas = await html2canvas(slideEl, {
           backgroundColor: "#ffffff",
-          scale: 1.5,
-          allowTaint: true,
+          width: SLIDE_WIDTH,
+          height: SLIDE_HEIGHT,
+          scale: 2,
           useCORS: true,
         });
 
-        const imgWidth = pageWidth - 4;
-        const imgHeight = (canvas.height / canvas.width) * imgWidth;
-        const yPosition = Math.max(1, (pageHeight - imgHeight) / 2);
-        const imageData = canvas.toDataURL("image/png");
-
-        pdf.addImage(imageData, "PNG", 2, yPosition, imgWidth, imgHeight);
+        if (slideIndex > 0) {
+          pdf.addPage([SLIDE_WIDTH, SLIDE_HEIGHT], "landscape");
+        }
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT);
       }
 
-      setCurrentSlide(0);
+      setExportSlide(null);
       pdf.save(`${report.quarter}-${report.year}-board-report.pdf`);
     } catch (error) {
       console.error("Export error:", error);
     } finally {
+      setExportSlide(null);
       setExporting(false);
     }
   };
@@ -125,7 +131,7 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
   if (loading) {
     return (
       <main className="app-shell flex min-h-screen items-center justify-center">
-        <span className="loading loading-spinner loading-lg" aria-label="Loading" />
+        <span className="loading loading-spinner loading-lg" aria-label={t("common.loading")} />
       </main>
     );
   }
@@ -134,9 +140,9 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
     return (
       <main className="app-shell flex min-h-screen items-center justify-center p-6">
         <section className="w-full max-w-md rounded-lg border border-base-300 bg-base-100 p-6 shadow-sm">
-          <h1 className="mb-3 text-xl font-bold">Report not found</h1>
+          <h1 className="mb-3 text-xl font-bold">{t("editor.reportNotFound")}</h1>
           <button className="btn btn-primary" onClick={() => navigateTo("/")}>
-            Back to dashboard
+            {t("notFound.back")}
           </button>
         </section>
       </main>
@@ -146,8 +152,10 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
   if (isPresenting) {
     return (
       <>
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-auto bg-black">
-          <SlideRenderer report={report} slideIndex={currentSlide} compact={false} />
+        <div className="fixed inset-0 z-[1000] bg-black">
+          <SlideStage mode="contain">
+            <SlideRenderer report={report} slideIndex={currentSlide} />
+          </SlideStage>
         </div>
         <div className="fixed bottom-4 left-4 z-[1100] flex items-center gap-2 rounded bg-black/70 px-3 py-2 text-sm text-white">
           <button
@@ -184,13 +192,13 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
               <ArrowLeft size={18} />
             </button>
             <h1 className="truncate text-lg font-bold">
-              {report.quarter} {report.year} - Slide Preview
+              {t("slidesView.title", { quarter: report.quarter, year: report.year })}
             </h1>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button className="btn btn-primary btn-sm gap-2" onClick={() => setIsPresenting(true)}>
               <Play size={16} />
-              Present
+              {t("slidesView.present")}
             </button>
             <button
               className="btn btn-success btn-sm gap-2"
@@ -202,31 +210,30 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
               ) : (
                 <Download size={16} />
               )}
-              {exporting ? "Exporting" : "PDF"}
+              {exporting ? t("slidesView.exporting") : t("slidesView.pdf")}
             </button>
             <button
               className="btn btn-ghost btn-sm gap-2"
               onClick={() => navigateTo(`/editor/${encodeURIComponent(report.id)}`)}
             >
               <Edit2 size={16} />
-              Edit
+              {t("dashboard.edit")}
             </button>
           </div>
         </div>
       </header>
 
       <section className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
-        <div className="flex flex-col gap-5" ref={slideRef}>
-          <section
-            className="min-h-[70vh] overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-sm"
-            data-slide-preview
-          >
-            <SlideRenderer report={report} slideIndex={currentSlide} compact={false} />
+        <div className="flex flex-col gap-5">
+          <section className="overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-sm">
+            <SlideStage mode="width">
+              <SlideRenderer report={report} slideIndex={currentSlide} />
+            </SlideStage>
           </section>
 
           <nav className="rounded-lg border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="mb-3 border-b border-base-300 pb-3 text-center text-sm font-medium text-base-content/60">
-              Slide {currentSlide + 1} of {totalSlides}
+              {t("slidesView.slideOf", { current: currentSlide + 1, total: totalSlides })}
             </div>
             <div className="flex flex-wrap gap-2">
               {Array.from({ length: totalSlides }).map((_, index) => (
@@ -246,6 +253,22 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
           </nav>
         </div>
       </section>
+
+      {/* Off-screen full-size render used only for high-resolution PDF capture. */}
+      <div
+        ref={exportRef}
+        aria-hidden
+        style={{
+          position: "fixed",
+          top: 0,
+          left: -100000,
+          width: SLIDE_WIDTH,
+          height: SLIDE_HEIGHT,
+          pointerEvents: "none",
+        }}
+      >
+        {exportSlide !== null && <SlideRenderer report={report} slideIndex={exportSlide} />}
+      </div>
     </main>
   );
 }

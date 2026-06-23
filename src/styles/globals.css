@@ -3,8 +3,33 @@
   themes: light --default;
 }
 
+/* Noto Sans Display (variable: weight 100-900, width 62.5-100) */
+@font-face {
+  font-family: "Noto Sans Display";
+  src: url("../assets/fonts/NotoSansDisplay.ttf") format("truetype");
+  font-weight: 100 900;
+  font-stretch: 62.5% 100%;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Noto Sans Display";
+  src: url("../assets/fonts/NotoSansDisplay-Italic.ttf") format("truetype");
+  font-weight: 100 900;
+  font-stretch: 62.5% 100%;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
+  --font-display: "Noto Sans Display", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html,
+body {
+  font-family: var(--font-display);
 }
 
 html {

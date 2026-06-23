@@ -114,6 +114,32 @@ export interface Report {
   decisionsRequired: Decision[];
 }
 
+// Application settings (language, AI assist, redaction) ---------------------
+
+export type AppLanguage = "en" | "de";
+
+/**
+ * A keyword that is swapped for a neutral placeholder before any text is sent
+ * to the AI, and swapped back to the original value in the AI's response.
+ * Lets users keep sensitive terms (company names, products, people) off the
+ * wire while still benefiting from AI assistance.
+ */
+export interface RedactionRule {
+  id: string;
+  keyword: string; // original, sensitive value (e.g. "Acme Corp")
+  placeholder: string; // neutral token sent to the AI (e.g. "[COMPANY]")
+}
+
+export interface AppSettings {
+  language: AppLanguage;
+  openRouterApiKey: string;
+  openRouterModel: string;
+  redactionRules: RedactionRule[];
+  /** Optional company logo (data URL) shown on every presentation slide. */
+  logo: string;
+  updatedAt: string;
+}
+
 export type ReportSection =
   | "executiveSummary"
   | "topRisks"

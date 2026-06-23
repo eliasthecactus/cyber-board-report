@@ -1,44 +1,63 @@
 import { Report } from "@/types";
-import { Link2, AlertTriangle } from "lucide-react";
-import styles from "../SlideRenderer.module.css";
+import { Link2, ShieldAlert } from "lucide-react";
+import { useT } from "@/lib/i18n";
+import { SlideFrame } from "../SlideFrame";
+import { ACCENTS } from "../slideConstants";
 
 interface SupplyChainSlideProps {
   report: Report;
-  compact?: boolean;
 }
 
-export default function SupplyChainSlide({ report, compact: _compact = true }: SupplyChainSlideProps) {
+const MAX_RISKS = 6;
+
+export default function SupplyChainSlide({ report }: SupplyChainSlideProps) {
+  const t = useT();
+  const accent = ACCENTS.supplyChainRisk;
+  const risks = report.supplyChainRisk.risks.filter(Boolean).slice(0, MAX_RISKS);
+
   return (
-    <>
-      <h2>Third-Party & Supply Chain Risk</h2>
-      <div className={styles.content}>
-        <div className="mb-5">
-          <h3 className="flex items-center gap-2 text-orange-700 mb-3">
-            <Link2 size={18} />
-            Key Supply Chain Risks
+    <SlideFrame report={report} accent={accent} title={t("slide.supply.title")} icon={Link2}>
+      <div className="grid h-full grid-cols-[1.2fr_1fr] gap-6">
+        <div>
+          <h3
+            className="mb-3 flex items-center gap-2 text-[20px] font-bold"
+            style={{ color: accent }}
+          >
+            <Link2 size={20} />
+            {t("slide.supply.keyRisks")}
           </h3>
-          {report.supplyChainRisk.risks.length === 0 ? (
-            <p className="text-gray-500 italic">No risks identified</p>
+          {risks.length === 0 ? (
+            <p className="text-[18px] italic text-slate-400">{t("slide.supply.none")}</p>
           ) : (
-            <ul className="space-y-2 list-none pl-0">
-              {report.supplyChainRisk.risks.map((risk, idx) => (
-                <li key={idx} className="flex gap-2">
-                  <span className="text-orange-600 font-bold mt-0.5">→</span>
-                  <span className="text-gray-700">{risk}</span>
+            <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
+              {risks.map((risk, idx) => (
+                <li key={idx} className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold" style={{ color: accent }}>
+                    →
+                  </span>
+                  <span className="text-[18px] leading-snug text-slate-700">{risk}</span>
                 </li>
               ))}
             </ul>
           )}
         </div>
 
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
-          <h3 className="flex items-center gap-2 text-blue-700 mb-2">
-            <AlertTriangle size={18} />
-            Assessment
+        <div
+          className="flex flex-col rounded-2xl border p-6"
+          style={{ backgroundColor: `${accent}0D`, borderColor: `${accent}33` }}
+        >
+          <h3
+            className="mb-3 flex items-center gap-2 text-[20px] font-bold"
+            style={{ color: accent }}
+          >
+            <ShieldAlert size={20} />
+            {t("slide.supply.assessment")}
           </h3>
-          <p className="text-gray-700 m-0">{report.supplyChainRisk.assessment || "No assessment provided"}</p>
+          <p className="m-0 whitespace-pre-line text-[18px] leading-relaxed text-slate-700">
+            {report.supplyChainRisk.assessment || t("slide.supply.noAssessment")}
+          </p>
         </div>
       </div>
-    </>
+    </SlideFrame>
   );
 }

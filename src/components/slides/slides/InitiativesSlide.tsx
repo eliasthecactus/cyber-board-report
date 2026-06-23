@@ -1,75 +1,83 @@
 import { Report } from "@/types";
-import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
-import styles from "../SlideRenderer.module.css";
+import { AlertCircle, CheckCircle2, Clock, Target } from "lucide-react";
+import { useT } from "@/lib/i18n";
+import { SlideFrame } from "../SlideFrame";
+import { ACCENTS } from "../slideConstants";
 
 interface InitiativesSlideProps {
   report: Report;
-  compact?: boolean;
 }
 
-export default function InitiativesSlide({ report, compact: _compact = true }: InitiativesSlideProps) {
-  const statusConfig: Record<string, { color: string; badge: string; icon: any }> = {
-    "on-track": { color: "#16a34a", badge: "badge-success", icon: CheckCircle2 },
-    "at-risk": { color: "#ea580c", badge: "badge-warning", icon: AlertCircle },
-    delayed: { color: "#dc2626", badge: "badge-error", icon: AlertCircle },
-    "not-started": { color: "#6b7280", badge: "badge-ghost", icon: Clock },
-  };
+const statusConfig: Record<string, { color: string; icon: typeof CheckCircle2 }> = {
+  "on-track": { color: "#16a34a", icon: CheckCircle2 },
+  "at-risk": { color: "#ea580c", icon: AlertCircle },
+  delayed: { color: "#dc2626", icon: AlertCircle },
+  "not-started": { color: "#6b7280", icon: Clock },
+};
+
+const MAX_INITIATIVES = 5;
+
+export default function InitiativesSlide({ report }: InitiativesSlideProps) {
+  const t = useT();
+  const accent = ACCENTS.initiatives;
+  const initiatives = report.initiatives.slice(0, MAX_INITIATIVES);
 
   return (
-    <>
-      <h2>Security Initiatives</h2>
-      <div className={styles.content}>
-        {report.initiatives.length === 0 ? (
-          <p>No initiatives recorded</p>
-        ) : (
-          <div className="space-y-3">
-            {report.initiatives.slice(0, 4).map((init) => {
-              const config = statusConfig[init.status] || statusConfig["on-track"];
-              const Icon = config.icon;
-              return (
-                <div key={init.id} className="bg-base-100 border border-base-300 rounded-lg p-3 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between gap-3 mb-2.5">
-                    <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                      <div className="shrink-0 p-2 rounded-lg" style={{ background: config.color + "20" }}>
-                        <Icon size={18} style={{ color: config.color }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="m-0 font-semibold text-gray-900 text-sm leading-tight">{init.name}</h3>
-                        {init.blockers && (
-                          <p className="m-0 text-xs text-gray-600 mt-0.5">Blockers: {init.blockers}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className={`badge badge-sm ${config.badge} whitespace-nowrap shrink-0`}>
-                      {init.status.replace("-", " ")}
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <progress 
-                        className="progress w-full h-1.5" 
-                        value={init.progress} 
-                        max="100"
-                        style={{
-                          "--value": init.progress,
-                          "--size": "0.5rem",
-                          "--track-color": "rgb(229, 231, 235)",
-                          "--bar-color": config.color,
-                        } as any}
-                      />
-                    </div>
-                    <span className="text-xs font-bold text-gray-600 shrink-0 w-10 text-right">
-                      {init.progress}%
+    <SlideFrame report={report} accent={accent} title={t("slide.initiatives.title")} icon={Target}>
+      {report.initiatives.length === 0 ? (
+        <p className="text-[20px] text-slate-400">{t("slide.initiatives.none")}</p>
+      ) : (
+        <div className="flex h-full flex-col justify-center gap-3">
+          {initiatives.map((init) => {
+            const config = statusConfig[init.status] || statusConfig["on-track"];
+            const Icon = config.icon;
+            return (
+              <div
+                key={init.id}
+                className="rounded-xl border border-slate-100 bg-slate-50 p-4"
+              >
+                <div className="mb-2.5 flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                      style={{ backgroundColor: `${config.color}20`, color: config.color }}
+                    >
+                      <Icon size={20} />
                     </span>
+                    <div className="min-w-0">
+                      <h3 className="m-0 truncate text-[18px] font-semibold text-slate-900">
+                        {init.name}
+                      </h3>
+                      {init.blockers && (
+                        <p className="m-0 truncate text-[14px] text-slate-500">
+                          {t("slide.initiatives.blockers", { text: init.blockers })}
+                        </p>
+                      )}
+                    </div>
                   </div>
+                  <span
+                    className="shrink-0 rounded-full px-3 py-1 text-[13px] font-semibold text-white"
+                    style={{ backgroundColor: config.color }}
+                  >
+                    {t(`slide.status.${init.status}`)}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </>
+                <div className="flex items-center gap-3">
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${init.progress}%`, backgroundColor: config.color }}
+                    />
+                  </div>
+                  <span className="w-12 shrink-0 text-right text-[15px] font-bold text-slate-600 tabular-nums">
+                    {init.progress}%
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </SlideFrame>
   );
 }
