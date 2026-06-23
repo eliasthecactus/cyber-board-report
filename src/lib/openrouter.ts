@@ -107,46 +107,88 @@ function languageName(settings: AppSettings): string {
   return settings.language === "de" ? "German" : "English";
 }
 
+/** Drop a trailing colon and surrounding whitespace from a UI label ("Description:" -> "Description"). */
+function cleanLabel(label: string): string {
+  return label.replace(/\s*[:：]\s*$/, "").trim();
+}
+
+/**
+ * Remove a leading "<field label>:" the model sometimes prepends to its answer
+ * (e.g. "Description: ..."), even if it used a translated form of the label.
+ */
+function stripLabelEcho(text: string, fieldLabel: string): string {
+  const label = cleanLabel(fieldLabel);
+  if (!label) {
+    return text;
+  }
+  // Match the first line if it is just "<something short>:" followed by the real text.
+  const match = text.match(/^\s*([^\n:：]{1,40})[:：]\s+/);
+  if (match) {
+    const prefix = match[1].trim().toLowerCase();
+    // Only strip when it looks like a label echo, not a real sentence.
+    if (prefix === label.toLowerCase() || (!prefix.includes(" ") && prefix.length <= 24)) {
+      return text.slice(match[0].length).trimStart();
+    }
+  }
+  return text;
+}
+
 function buildUserPrompt(
   action: AiAction,
   fieldLabel: string,
   fieldText: string,
   context: string,
+  itemContext: string,
 ): string {
+  const label = cleanLabel(fieldLabel);
   const contextBlock = context.trim()
     ? `\n\nFor context, here is the rest of the board report:\n"""\n${context.trim()}\n"""`
+    : "";
+  // Structured facts about the specific item this field belongs to (e.g. the
+  // particular risk's name, likelihood, impact and trend). This is what makes
+  // the output accurate and specific rather than a generic summary.
+  const itemBlock = itemContext.trim()
+    ? `\n\nThis field belongs to one specific item whose key attributes are already known. ` +
+      `Write text that is accurate for and consistent with these attributes; do not contradict them and do not simply list them back:\n"""\n${itemContext.trim()}\n"""`
     : "";
 
   switch (action) {
     case "fill":
       return (
-        `Write the content for the "${fieldLabel}" field of a quarterly cyber security board report. ` +
-        `Produce NEW prose written specifically for the "${fieldLabel}" field — do not copy, restate, or echo any other section verbatim. ` +
+        `Write the content for the "${label}" field of a quarterly cyber security board report. ` +
+        `Produce NEW prose written specifically for the "${label}" field — do not copy, restate, or echo any other section verbatim. ` +
         `The surrounding report is provided only as background so your text stays consistent with it; it is not the answer. ` +
-        `Keep it concise and board-appropriate, and write only the text that belongs in "${fieldLabel}".` +
+        `Keep it concise and board-appropriate, and write only the text that belongs in "${label}". ` +
+        `Do not begin your answer with the field name or any label such as "${label}:".` +
+        itemBlock +
         contextBlock +
         (fieldText.trim()
-          ? `\n\nThe "${fieldLabel}" field currently contains these rough notes to build on:\n"""\n${fieldText.trim()}\n"""`
+          ? `\n\nThe "${label}" field currently contains these rough notes to build on:\n"""\n${fieldText.trim()}\n"""`
           : "")
       );
     case "rephrase":
       return (
-        `Rephrase the following "${fieldLabel}" text for a board of directors. ` +
-        `Keep the meaning and roughly the same length, but make it clearer and more professional.` +
+        `Rephrase the following "${label}" text for a board of directors. ` +
+        `Keep the meaning and roughly the same length, but make it clearer and more professional. ` +
+        `Do not begin your answer with the field name or any label.` +
+        itemBlock +
         contextBlock +
         `\n\nText to rephrase:\n"""\n${fieldText.trim()}\n"""`
       );
     case "summarize":
       return (
-        `Summarize the following "${fieldLabel}" text into a tighter, board-ready version. ` +
-        `Keep only the most important points.` +
+        `Summarize the following "${label}" text into a tighter, board-ready version. ` +
+        `Keep only the most important points. Do not begin your answer with the field name or any label.` +
+        itemBlock +
         contextBlock +
         `\n\nText to summarize:\n"""\n${fieldText.trim()}\n"""`
       );
     case "extend":
       return (
-        `Expand the following "${fieldLabel}" text with relevant detail appropriate for a board report, ` +
-        `keeping the existing tone and staying consistent with the rest of the report.` +
+        `Expand the following "${label}" text with relevant detail appropriate for a board report, ` +
+        `keeping the existing tone and staying consistent with the rest of the report. ` +
+        `Do not begin your answer with the field name or any label.` +
+        itemBlock +
         contextBlock +
         `\n\nText to expand:\n"""\n${fieldText.trim()}\n"""`
       );
@@ -160,6 +202,8 @@ export interface AssistParams {
   fieldLabel: string;
   fieldText: string;
   context?: string;
+  /** Structured facts about the specific item this field belongs to. */
+  itemContext?: string;
   settings: AppSettings;
 }
 
@@ -168,23 +212,25 @@ export interface AssistParams {
  * rules; placeholders are restored in the returned text.
  */
 export async function assistText(params: AssistParams): Promise<string> {
-  const { action, fieldLabel, fieldText, context = "", settings } = params;
+  const { action, fieldLabel, fieldText, context = "", itemContext = "", settings } = params;
   const rules = settings.redactionRules;
 
   const system =
     `You are an expert assistant helping a CISO write a quarterly cyber security board report. ` +
     `Write clearly and concisely for a non-technical board of directors. ` +
     `Always respond in ${languageName(settings)}. ` +
-    `Return only the requested field text — no preamble, no explanations, no quotation marks, and no markdown code fences.`;
+    `Return only the requested field text — no preamble, no explanations, no quotation marks, no markdown code fences, ` +
+    `and never prefix your answer with the field name or a label like "Field:".`;
 
   const safeField = applyRedaction(fieldText, rules);
   const safeContext = applyRedaction(context, rules);
-  const userPrompt = buildUserPrompt(action, fieldLabel, safeField, safeContext);
+  const safeItemContext = applyRedaction(itemContext, rules);
+  const userPrompt = buildUserPrompt(action, fieldLabel, safeField, safeContext, safeItemContext);
 
   const raw = await callOpenRouter(settings, [
     { role: "system", content: system },
     { role: "user", content: userPrompt },
   ]);
 
-  return restoreRedaction(raw, rules);
+  return stripLabelEcho(restoreRedaction(raw, rules), fieldLabel);
 }

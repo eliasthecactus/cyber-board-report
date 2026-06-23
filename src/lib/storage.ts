@@ -22,7 +22,12 @@ export interface AppSnapshot {
   exportedAt: string;
   profile: LocalProfile;
   reports: Report[];
+  /** App settings (language, AI config, redaction rules, logo). */
+  settings: AppSettings;
 }
+
+/** The localStorage fallback only mirrors reports and profile; settings live under their own key. */
+type FallbackSnapshot = Omit<AppSnapshot, "settings">;
 
 interface SettingRecord<T = unknown> {
   key: string;
@@ -32,6 +37,7 @@ interface SettingRecord<T = unknown> {
 export interface ImportResult {
   reportsImported: number;
   profileImported: boolean;
+  settingsImported: boolean;
 }
 
 function defaultProfile(): LocalProfile {
@@ -75,7 +81,7 @@ function openDatabase(): Promise<IDBDatabase> {
   return dbPromise;
 }
 
-function readFallbackSnapshot(): AppSnapshot {
+function readFallbackSnapshot(): FallbackSnapshot {
   const raw = window.localStorage.getItem(FALLBACK_KEY);
   if (!raw) {
     return {
@@ -87,7 +93,7 @@ function readFallbackSnapshot(): AppSnapshot {
   }
 
   try {
-    const parsed = JSON.parse(raw) as Partial<AppSnapshot>;
+    const parsed = JSON.parse(raw) as Partial<FallbackSnapshot>;
     return {
       version: Number(parsed.version || SNAPSHOT_VERSION),
       exportedAt: parsed.exportedAt || new Date().toISOString(),
@@ -109,7 +115,7 @@ function readFallbackSnapshot(): AppSnapshot {
   }
 }
 
-function writeFallbackSnapshot(snapshot: AppSnapshot): void {
+function writeFallbackSnapshot(snapshot: FallbackSnapshot): void {
   window.localStorage.setItem(FALLBACK_KEY, JSON.stringify(snapshot));
 }
 
@@ -373,6 +379,7 @@ export async function exportSnapshot(): Promise<AppSnapshot> {
     exportedAt: new Date().toISOString(),
     profile: await getProfile(),
     reports: await listReports(),
+    settings: await getSettings(),
   };
 }
 
@@ -390,8 +397,12 @@ export async function importSnapshotPayload(payload: unknown): Promise<ImportRes
       ? [candidate as Partial<Report>]
       : [];
 
-  if (reports.length === 0) {
-    throw new Error("The selected file does not contain report data.");
+  const hasSettings = isRecord(snapshotCandidate.settings);
+
+  // A backup may legitimately omit reports (e.g. a settings-only export, or a
+  // file the user trimmed down). Only reject files with nothing we can restore.
+  if (reports.length === 0 && !hasSettings) {
+    throw new Error("The selected file does not contain report or settings data.");
   }
 
   let imported = 0;
@@ -416,9 +427,37 @@ export async function importSnapshotPayload(payload: unknown): Promise<ImportRes
     });
   }
 
+  // Restore settings if the backup carries them. Fields that are absent or blank
+  // (e.g. an API key or name the user deliberately stripped before sharing) are
+  // left untouched rather than wiping the current value.
+  let settingsImported = false;
+  if (hasSettings) {
+    const incoming = snapshotCandidate.settings as Partial<AppSettings>;
+    const current = await getSettings();
+    const patch: Partial<AppSettings> = {};
+    if (incoming.language === "de" || incoming.language === "en") {
+      patch.language = incoming.language;
+    }
+    if (typeof incoming.openRouterApiKey === "string" && incoming.openRouterApiKey.trim()) {
+      patch.openRouterApiKey = incoming.openRouterApiKey;
+    }
+    if (typeof incoming.openRouterModel === "string" && incoming.openRouterModel.trim()) {
+      patch.openRouterModel = incoming.openRouterModel;
+    }
+    if (Array.isArray(incoming.redactionRules)) {
+      patch.redactionRules = incoming.redactionRules;
+    }
+    if (typeof incoming.logo === "string" && incoming.logo) {
+      patch.logo = incoming.logo;
+    }
+    await saveSettings(normalizeSettings({ ...current, ...patch }));
+    settingsImported = true;
+  }
+
   return {
     reportsImported: imported,
     profileImported: Boolean(incomingProfile?.displayName),
+    settingsImported,
   };
 }
 

@@ -51,6 +51,8 @@ const en: Dict = {
   "dashboard.duplicated": "Duplicated {quarter} {year}.",
   "dashboard.importedOne": "Imported 1 report.",
   "dashboard.importedMany": "Imported {count} reports.",
+  "dashboard.importedSettings": "Settings restored.",
+  "dashboard.importedSettingsOnly": "Settings restored.",
   "dashboard.importFailed": "Import failed.",
 
   // Report editor -----------------------------------------------------------
@@ -224,7 +226,7 @@ const en: Dict = {
   "ed.risks.likelihood": "Likelihood",
   "ed.risks.impact": "Business Impact",
   "ed.risks.trend": "Trend",
-  "ed.risks.descriptionLabel": "Description:",
+  "ed.risks.descriptionLabel": "Risk description",
   "ed.risks.descriptionPlaceholder": "Describe the risk and its potential business consequences...",
   "ed.risks.add": "Add Risk",
   "ed.risks.empty": "No risks added yet.",
@@ -452,6 +454,8 @@ const de: Dict = {
   "dashboard.duplicated": "{quarter} {year} dupliziert.",
   "dashboard.importedOne": "1 Bericht importiert.",
   "dashboard.importedMany": "{count} Berichte importiert.",
+  "dashboard.importedSettings": "Einstellungen wiederhergestellt.",
+  "dashboard.importedSettingsOnly": "Einstellungen wiederhergestellt.",
   "dashboard.importFailed": "Import fehlgeschlagen.",
 
   // Report editor
@@ -640,7 +644,7 @@ const de: Dict = {
   "ed.risks.likelihood": "Eintrittswahrscheinlichkeit",
   "ed.risks.impact": "Geschäftsauswirkung",
   "ed.risks.trend": "Tendenz",
-  "ed.risks.descriptionLabel": "Beschreibung:",
+  "ed.risks.descriptionLabel": "Risikobeschreibung",
   "ed.risks.descriptionPlaceholder":
     "Beschreiben Sie das Risiko und seine möglichen geschäftlichen Folgen …",
   "ed.risks.add": "Risiko hinzufügen",

@@ -17,6 +17,8 @@ interface SettingsContextValue {
   loading: boolean;
   /** Persist a partial update and merge it into the current settings. */
   update: (patch: Partial<AppSettings>) => Promise<void>;
+  /** Re-read settings from storage (e.g. after importing a backup). */
+  reload: () => Promise<void>;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -55,9 +57,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings(saved);
   }, []);
 
+  const reload = useCallback(async () => {
+    const stored = await getSettings();
+    settingsRef.current = stored;
+    setSettings(stored);
+  }, []);
+
   const value = useMemo(
-    () => ({ settings, loading, update }),
-    [settings, loading, update],
+    () => ({ settings, loading, update, reload }),
+    [settings, loading, update, reload],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

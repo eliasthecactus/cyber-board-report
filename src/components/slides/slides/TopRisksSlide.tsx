@@ -117,37 +117,54 @@ export default function TopRisksSlide({ report }: TopRisksSlideProps) {
               ))}
             </div>
 
-            <div>
+            <div className="flex min-w-0 flex-col">
               <h3 className="m-0 mb-2 text-[15px] font-bold uppercase tracking-wide text-slate-500">
                 {t("slide.risks.distribution")}
               </h3>
-              <div className="grid grid-cols-5 gap-1 text-center">
-                <div />
-                {matrixHeaders.map((imp) => (
-                  <div key={imp} className="text-[13px] font-bold text-slate-500">
-                    {imp}
-                  </div>
-                ))}
-                {levels.map((likelihood) => (
-                  <div key={likelihood} className="contents">
-                    <div className="flex items-center justify-end pr-1 text-[13px] font-bold text-slate-500">
-                      {likelihood[0].toUpperCase()}
-                    </div>
-                    {levels.map((impact) => {
-                      const count = report.topRisks.filter(
-                        (r) => r.likelihood === likelihood && r.businessImpact === impact,
-                      ).length;
-                      return (
-                        <div
-                          key={`${likelihood}-${impact}`}
-                          className={`flex h-[52px] items-center justify-center rounded text-[16px] font-semibold ${cellColor[getRiskColor(likelihood, impact)]}`}
-                        >
-                          {count || ""}
+              <div className="flex gap-1.5">
+                {/* Y axis: likelihood increases downward */}
+                <div className="flex items-center">
+                  <span className="whitespace-nowrap text-[12px] font-bold uppercase tracking-wide text-slate-500 [writing-mode:vertical-rl] rotate-180">
+                    {t("ed.risks.likelihood")}
+                  </span>
+                </div>
+                <div className="flex flex-1 flex-col">
+                  <div className="grid grid-cols-5 gap-1 text-center">
+                    <div />
+                    {matrixHeaders.map((imp) => (
+                      <div key={imp} className="text-[13px] font-bold text-slate-500">
+                        {imp}
+                      </div>
+                    ))}
+                    {levels.map((likelihood) => (
+                      <div key={likelihood} className="contents">
+                        <div className="flex items-center justify-end pr-1 text-[13px] font-bold text-slate-500">
+                          {likelihood[0].toUpperCase()}
                         </div>
-                      );
-                    })}
+                        {levels.map((impact) => {
+                          const count = report.topRisks.filter(
+                            (r) => r.likelihood === likelihood && r.businessImpact === impact,
+                          ).length;
+                          return (
+                            <div
+                              key={`${likelihood}-${impact}`}
+                              className={`flex h-[52px] items-center justify-center rounded text-[16px] font-semibold ${cellColor[getRiskColor(likelihood, impact)]}`}
+                            >
+                              {count || ""}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                  {/* X axis: business impact increases rightward */}
+                  <div className="mt-1.5 grid grid-cols-5">
+                    <div />
+                    <div className="col-span-4 text-center text-[12px] font-bold uppercase tracking-wide text-slate-500">
+                      {t("ed.risks.impact")}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -11,12 +11,19 @@ interface AiTextareaProps extends Omit<ComponentProps<"textarea">, "value" | "on
   onValueChange: (value: string) => void;
   /** Human-readable name of this field, used in the AI prompt. */
   aiLabel: string;
+  /**
+   * Structured facts about the specific item this field belongs to (e.g. the
+   * risk's name, likelihood, impact and trend). Lets the AI write accurate,
+   * specific text instead of a generic summary.
+   */
+  aiContext?: string;
 }
 
 export function AiTextarea({
   value,
   onValueChange,
   aiLabel,
+  aiContext,
   className,
   ...textareaProps
 }: AiTextareaProps) {
@@ -39,6 +46,7 @@ export function AiTextarea({
         fieldLabel: aiLabel,
         fieldText: value,
         context: getContext(),
+        itemContext: aiContext,
         settings,
       });
       setPrevious(value);

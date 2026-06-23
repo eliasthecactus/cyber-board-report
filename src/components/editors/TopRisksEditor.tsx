@@ -31,6 +31,18 @@ export default function TopRisksEditor({ data, onUpdate }: TopRisksEditorProps) 
     onUpdate(data.filter((risk) => risk.id !== id));
   };
 
+  // Structured facts about a risk, given to the AI so it writes a description
+  // that is accurate for this specific risk rather than a generic summary.
+  const riskAiContext = (risk: Risk): string =>
+    [
+      risk.name.trim() && `${t("ed.risks.nameLabel")}: ${risk.name.trim()}`,
+      `${t("ed.risks.likelihood")}: ${t(`enum.${risk.likelihood}`)}`,
+      `${t("ed.risks.impact")}: ${t(`enum.${risk.businessImpact}`)}`,
+      `${t("ed.risks.trend")}: ${t(`enum.${risk.trend}`)}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
   return (
     <div>
       <h2>{t("ed.risks.title")}</h2>
@@ -109,6 +121,7 @@ export default function TopRisksEditor({ data, onUpdate }: TopRisksEditorProps) 
 
             <AiTextarea
               aiLabel={t("ed.risks.descriptionLabel")}
+              aiContext={riskAiContext(risk)}
               placeholder={t("ed.risks.descriptionPlaceholder")}
               value={risk.description || ""}
               onValueChange={(value) => updateRisk(risk.id, { description: value })}

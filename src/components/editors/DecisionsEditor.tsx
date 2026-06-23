@@ -34,6 +34,17 @@ export default function DecisionsEditor({
     onUpdate(data.filter((decision) => decision.id !== id));
   };
 
+  // Facts about this specific decision so the AI keeps rationale and impact
+  // consistent with the decision title and with each other.
+  const decisionAiContext = (decision: Decision): string =>
+    [
+      decision.title.trim() && `${t("ed.dec.titleLabel")}: ${decision.title.trim()}`,
+      decision.rationale.trim() && `${t("ed.dec.rationaleLabel")} ${decision.rationale.trim()}`,
+      decision.impact.trim() && `${t("ed.dec.impactLabel")} ${decision.impact.trim()}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
   return (
     <div>
       <h2>{t("ed.dec.title")}</h2>
@@ -65,6 +76,7 @@ export default function DecisionsEditor({
                 </label>
                 <AiTextarea
                   aiLabel={t("ed.dec.rationaleLabel")}
+                  aiContext={decisionAiContext(decision)}
                   placeholder={t("ed.dec.rationalePlaceholder")}
                   value={decision.rationale}
                   onValueChange={(value) => updateDecision(decision.id, { rationale: value })}
@@ -78,6 +90,7 @@ export default function DecisionsEditor({
                 </label>
                 <AiTextarea
                   aiLabel={t("ed.dec.impactLabel")}
+                  aiContext={decisionAiContext(decision)}
                   placeholder={t("ed.dec.impactPlaceholder")}
                   value={decision.impact}
                   onValueChange={(value) => updateDecision(decision.id, { impact: value })}

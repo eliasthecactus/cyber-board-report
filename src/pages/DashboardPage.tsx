@@ -16,6 +16,7 @@ import { backupFilename, downloadJson, readJsonFile } from "@/lib/files";
 import { createEmptyReport, cloneReport } from "@/lib/reportFactory";
 import { navigateTo } from "@/lib/navigation";
 import { useT } from "@/lib/i18n";
+import { useSettings } from "@/lib/settings";
 import {
   deleteReport,
   exportSnapshot,
@@ -38,6 +39,7 @@ const initialFormState = (): CreateFormState => ({
 
 export default function DashboardPage() {
   const t = useT();
+  const { reload: reloadSettings } = useSettings();
   const [reports, setReports] = useState<Report[]>([]);
   const [profile, setProfile] = useState<LocalProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -129,11 +131,18 @@ export default function DashboardPage() {
     try {
       const payload = await readJsonFile(file);
       const result = await importSnapshotPayload(payload);
-      setMessage(
-        result.reportsImported === 1
-          ? t("dashboard.importedOne")
-          : t("dashboard.importedMany", { count: result.reportsImported }),
-      );
+      if (result.settingsImported) {
+        await reloadSettings();
+      }
+      if (result.reportsImported === 0 && result.settingsImported) {
+        setMessage(t("dashboard.importedSettingsOnly"));
+      } else {
+        const base =
+          result.reportsImported === 1
+            ? t("dashboard.importedOne")
+            : t("dashboard.importedMany", { count: result.reportsImported });
+        setMessage(result.settingsImported ? `${base} ${t("dashboard.importedSettings")}` : base);
+      }
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t("dashboard.importFailed"));

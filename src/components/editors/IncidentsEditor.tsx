@@ -37,6 +37,21 @@ export default function IncidentsEditor({
     onUpdate(data.filter((incident) => incident.id !== id));
   };
 
+  // What the AI knows about this specific incident, so each field it drafts
+  // stays consistent with the title, severity and the other fields.
+  const incidentAiContext = (incident: Incident): string =>
+    [
+      incident.title.trim() && `${t("ed.inc.titlePlaceholder")}: ${incident.title.trim()}`,
+      incident.severity && `${t("ed.risks.impact")}: ${t(`ed.inc.severity.${incident.severity}`)}`,
+      incident.businessImpact.trim() &&
+        `${t("ed.inc.impactLabel")} ${incident.businessImpact.trim()}`,
+      incident.outcome.trim() && `${t("ed.inc.outcomeLabel")} ${incident.outcome.trim()}`,
+      incident.lessonsLearned.trim() &&
+        `${t("ed.inc.lessonsLabel")} ${incident.lessonsLearned.trim()}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
   return (
     <div>
       <h2>{t("ed.inc.title")}</h2>
@@ -80,6 +95,7 @@ export default function IncidentsEditor({
                 </label>
                 <AiTextarea
                   aiLabel={t("ed.inc.impactLabel")}
+                  aiContext={incidentAiContext(incident)}
                   placeholder={t("ed.inc.impactPlaceholder")}
                   value={incident.businessImpact}
                   onValueChange={(value) =>
@@ -95,6 +111,7 @@ export default function IncidentsEditor({
                 </label>
                 <AiTextarea
                   aiLabel={t("ed.inc.outcomeLabel")}
+                  aiContext={incidentAiContext(incident)}
                   placeholder={t("ed.inc.outcomePlaceholder")}
                   value={incident.outcome}
                   onValueChange={(value) => updateIncident(incident.id, { outcome: value })}
@@ -108,6 +125,7 @@ export default function IncidentsEditor({
                 </label>
                 <AiTextarea
                   aiLabel={t("ed.inc.lessonsLabel")}
+                  aiContext={incidentAiContext(incident)}
                   placeholder={t("ed.inc.lessonsPlaceholder")}
                   value={incident.lessonsLearned}
                   onValueChange={(value) =>
