@@ -39,17 +39,17 @@ export default function ProgramStatusEditor({
 
   return (
     <div>
-      <h2>{t("ed.program.title")}</h2>
-      <p className="text-base-content/70 text-sm mb-5">{t("ed.program.desc")}</p>
+      <h2 className="text-lg font-semibold text-slate-900">{t("ed.program.title")}</h2>
+      <p className="text-sm text-slate-500 mb-5">{t("ed.program.desc")}</p>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.program.statusLabel")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.program.statusLabel")}</span>
         </label>
         <select
           value={data.status}
           onChange={(e) => updateField("status", e.target.value as ProgramStatusType["status"])}
-          className="select select-bordered w-full"
+          className="form-input w-full"
         >
           <option value="on-track">{t("ed.program.status.onTrack")}</option>
           <option value="at-risk">{t("ed.program.status.atRisk")}</option>
@@ -58,8 +58,8 @@ export default function ProgramStatusEditor({
       </div>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.program.achievementsLabel")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.program.achievementsLabel")}</span>
         </label>
         {data.achievements.map((achievement, idx) => (
           <div key={idx} className="flex gap-2.5 mb-2.5">
@@ -68,22 +68,22 @@ export default function ProgramStatusEditor({
               placeholder={t("ed.program.achievementItem")}
               value={achievement}
               onChange={(e) => updateAchievement(idx, e.target.value)}
-              className="input input-bordered flex-1"
+              className="form-input flex-1"
             />
-            <button onClick={() => removeAchievement(idx)} className="btn btn-error btn-sm">
+            <button onClick={() => removeAchievement(idx)} className="cbr-btn cbr-btn-danger cbr-btn-sm">
               {t("common.remove")}
             </button>
           </div>
         ))}
-        <button onClick={addAchievement} className="btn btn-success btn-sm">
+        <button onClick={addAchievement} className="cbr-btn cbr-btn-primary cbr-btn-sm">
           <Plus size={16} className="mr-1" />
           {t("ed.program.addAchievement")}
         </button>
       </div>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.program.challengesLabel")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.program.challengesLabel")}</span>
         </label>
         {data.challenges.map((challenge, idx) => (
           <div key={idx} className="flex gap-2.5 mb-2.5">
@@ -92,20 +92,20 @@ export default function ProgramStatusEditor({
               placeholder={t("ed.program.challengeItem")}
               value={challenge}
               onChange={(e) => updateChallenge(idx, e.target.value)}
-              className="input input-bordered flex-1"
+              className="form-input flex-1"
             />
-            <button onClick={() => removeChallenge(idx)} className="btn btn-error btn-sm">
+            <button onClick={() => removeChallenge(idx)} className="cbr-btn cbr-btn-danger cbr-btn-sm">
               {t("common.remove")}
             </button>
           </div>
         ))}
-        <button onClick={addChallenge} className="btn btn-success btn-sm">
+        <button onClick={addChallenge} className="cbr-btn cbr-btn-primary cbr-btn-sm">
           <Plus size={16} className="mr-1" />
           {t("ed.program.addChallenge")}
         </button>
       </div>
 
-      <div className="alert alert-info mt-5">
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 mt-5">
         <div>
           <span>{t("ed.program.tip")}</span>
         </div>

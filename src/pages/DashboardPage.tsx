@@ -1,20 +1,27 @@
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from "react";
 import {
+  CalendarDays,
   Copy,
   Download,
   Edit2,
   FileJson,
+  FileText,
   HardDrive,
+  Loader2,
   Play,
   Plus,
   Settings,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 import type { Report } from "@/types";
 import { backupFilename, downloadJson, readJsonFile } from "@/lib/files";
 import { createEmptyReport, cloneReport } from "@/lib/reportFactory";
 import { navigateTo } from "@/lib/navigation";
+import { exportReportToPdf } from "@/lib/exportPdf";
+import SlideRenderer from "@/components/slides/SlideRenderer";
+import { SLIDE_WIDTH, SLIDE_HEIGHT } from "@/components/slides/slideConstants";
 import { useT } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
 import {
@@ -27,15 +34,17 @@ import {
   type LocalProfile,
 } from "@/lib/storage";
 
-interface CreateFormState {
+interface QuarterFormState {
   quarter: string;
   year: number;
 }
 
-const initialFormState = (): CreateFormState => ({
+const initialFormState = (): QuarterFormState => ({
   quarter: "",
   year: new Date().getFullYear(),
 });
+
+type DialogMode = "create" | "duplicate" | "changeQuarter";
 
 export default function DashboardPage() {
   const t = useT();
@@ -43,11 +52,17 @@ export default function DashboardPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [profile, setProfile] = useState<LocalProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [formData, setFormData] = useState<CreateFormState>(initialFormState);
+  const [dialogMode, setDialogMode] = useState<DialogMode | null>(null);
+  const [targetReport, setTargetReport] = useState<Report | null>(null);
+  const [formData, setFormData] = useState<QuarterFormState>(initialFormState);
+  const [formError, setFormError] = useState<string | null>(null);
   const [busyReportId, setBusyReportId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [exportingReportId, setExportingReportId] = useState<string | null>(null);
+  const [exportSlide, setExportSlide] = useState<number | null>(null);
+  const [exportReport, setExportReport] = useState<Report | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void refresh();
@@ -64,22 +79,67 @@ export default function DashboardPage() {
     setLoading(false);
   };
 
-  const handleCreateReport = async (event: FormEvent<HTMLFormElement>) => {
+  const quarterExists = (quarter: string, year: number, excludeId?: string): boolean => {
+    return reports.some(
+      (r) => r.quarter === quarter && r.year === year && r.id !== excludeId,
+    );
+  };
+
+  const openDialog = (mode: DialogMode, report?: Report) => {
+    setFormData(initialFormState());
+    setFormError(null);
+    setTargetReport(report || null);
+    setDialogMode(mode);
+  };
+
+  const closeDialog = () => {
+    setDialogMode(null);
+    setTargetReport(null);
+    setFormError(null);
+  };
+
+  const handleDialogSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!formData.quarter || !profile) {
+    if (!formData.quarter || !profile) return;
+
+    const excludeId = dialogMode === "changeQuarter" ? targetReport?.id : undefined;
+    if (quarterExists(formData.quarter, formData.year, excludeId)) {
+      setFormError(t("dashboard.quarterExists", { quarter: formData.quarter, year: formData.year }));
       return;
     }
 
-    const report = createEmptyReport({
-      quarter: formData.quarter,
-      year: Number(formData.year),
-      createdBy: profile.displayName,
-    });
-
-    await saveReport(report);
-    setFormData(initialFormState());
-    setShowCreateDialog(false);
-    navigateTo(`/editor/${encodeURIComponent(report.id)}`);
+    if (dialogMode === "create") {
+      const report = createEmptyReport({
+        quarter: formData.quarter,
+        year: Number(formData.year),
+        createdBy: profile.displayName,
+      });
+      await saveReport(report);
+      closeDialog();
+      navigateTo(`/editor/${encodeURIComponent(report.id)}`);
+    } else if (dialogMode === "duplicate" && targetReport) {
+      setBusyReportId(targetReport.id);
+      const duplicate = cloneReport(targetReport, profile.displayName);
+      duplicate.quarter = formData.quarter;
+      duplicate.year = Number(formData.year);
+      await saveReport(duplicate);
+      setReports(await listReports());
+      setBusyReportId(null);
+      closeDialog();
+      setMessage(t("dashboard.duplicated", { quarter: formData.quarter, year: formData.year }));
+    } else if (dialogMode === "changeQuarter" && targetReport) {
+      setBusyReportId(targetReport.id);
+      await saveReport({
+        ...targetReport,
+        quarter: formData.quarter,
+        year: Number(formData.year),
+        updatedAt: new Date().toISOString(),
+      });
+      setReports(await listReports());
+      setBusyReportId(null);
+      closeDialog();
+      setMessage(t("dashboard.quarterChanged", { quarter: formData.quarter, year: formData.year }));
+    }
   };
 
   const handleDelete = async (report: Report) => {
@@ -97,19 +157,6 @@ export default function DashboardPage() {
     setBusyReportId(null);
   };
 
-  const handleDuplicate = async (report: Report) => {
-    if (!profile) {
-      return;
-    }
-
-    setBusyReportId(report.id);
-    const duplicate = cloneReport(report, profile.displayName);
-    await saveReport(duplicate);
-    setReports(await listReports());
-    setBusyReportId(null);
-    setMessage(t("dashboard.duplicated", { quarter: report.quarter, year: report.year }));
-  };
-
   const handleExportAll = async () => {
     const snapshot = await exportSnapshot();
     downloadJson(backupFilename(), snapshot);
@@ -120,6 +167,32 @@ export default function DashboardPage() {
       backupFilename(`${report.quarter}-${report.year}-board-report`.toLowerCase()),
       report,
     );
+  };
+
+  const handleExportPdf = async (report: Report) => {
+    setExportingReportId(report.id);
+    setExportReport(report);
+    // Wait for render of the off-screen slide area
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+    try {
+      await exportReportToPdf(report, {
+        onSlide: async (slideIndex) => {
+          setExportSlide(slideIndex);
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+          return (exportRef.current?.firstElementChild as HTMLElement | null);
+        },
+        onDone: () => {
+          setExportSlide(null);
+          setExportReport(null);
+          setExportingReportId(null);
+        },
+      });
+    } catch (error) {
+      console.error("PDF export error:", error);
+      setExportSlide(null);
+      setExportReport(null);
+      setExportingReportId(null);
+    }
   };
 
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -151,24 +224,42 @@ export default function DashboardPage() {
     }
   };
 
+  const dialogTitle =
+    dialogMode === "create"
+      ? t("dashboard.createNewReport")
+      : dialogMode === "duplicate"
+        ? t("dashboard.duplicateTitle")
+        : t("dashboard.changeQuarter");
+
+  const dialogDesc =
+    dialogMode === "duplicate"
+      ? t("dashboard.duplicateDesc")
+      : dialogMode === "changeQuarter"
+        ? t("dashboard.changeQuarterDesc")
+        : null;
+
   if (loading) {
     return (
       <main className="app-shell flex min-h-screen items-center justify-center">
-        <span className="loading loading-spinner loading-lg" aria-label={t("common.loading")} />
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </main>
     );
   }
 
   return (
     <main className="app-shell min-h-screen">
-      <header className="border-b border-base-300 bg-base-100/95">
+      {/* Header */}
+      <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <button className="btn btn-ghost px-2 text-xl font-bold" onClick={() => navigateTo("/")}>
+          <button
+            className="text-lg font-bold text-slate-900 hover:text-primary transition-colors"
+            onClick={() => navigateTo("/")}
+          >
             {t("dashboard.brand")}
           </button>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <span className="hidden items-center gap-2 rounded border border-base-300 px-3 py-2 text-sm text-base-content/70 sm:flex">
-              <HardDrive size={16} />
+            <span className="hidden items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-500 sm:flex">
+              <HardDrive size={14} />
               {t("dashboard.localStorage")}
             </span>
             <input
@@ -179,61 +270,64 @@ export default function DashboardPage() {
               onChange={handleImport}
             />
             <button
-              className="btn btn-outline btn-sm gap-2"
+              className="cbr-btn cbr-btn-outline cbr-btn-sm"
               onClick={() => importInputRef.current?.click()}
             >
-              <Upload size={16} />
+              <Upload size={14} />
               {t("common.import")}
             </button>
-            <button className="btn btn-outline btn-sm gap-2" onClick={handleExportAll}>
-              <Download size={16} />
+            <button className="cbr-btn cbr-btn-outline cbr-btn-sm" onClick={handleExportAll}>
+              <Download size={14} />
               {t("common.backup")}
             </button>
-            <button className="btn btn-ghost btn-sm gap-2" onClick={() => navigateTo("/profile")}>
-              <Settings size={16} />
+            <button className="cbr-btn cbr-btn-ghost cbr-btn-sm" onClick={() => navigateTo("/profile")}>
+              <Settings size={14} />
               {t("dashboard.settings")}
             </button>
           </div>
         </div>
       </header>
 
+      {/* Content */}
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-base-content">{t("dashboard.heading")}</h1>
-            <p className="mt-1 text-sm text-base-content/60">
+            <h1 className="text-2xl font-bold text-slate-900">{t("dashboard.heading")}</h1>
+            <p className="mt-1 text-sm text-slate-500">
               {t("dashboard.signedInAs", { name: profile?.displayName || "Local User" })}
             </p>
           </div>
-          <button className="btn btn-primary gap-2" onClick={() => setShowCreateDialog(true)}>
-            <Plus size={18} />
+          <button className="cbr-btn cbr-btn-primary" onClick={() => openDialog("create")}>
+            <Plus size={16} />
             {t("dashboard.createReport")}
           </button>
         </div>
 
+        {/* Toast message */}
         {message && (
-          <div className="alert mb-5 flex items-center justify-between border border-base-300 bg-base-100">
-            <span>{message}</span>
-            <button className="btn btn-ghost btn-sm" onClick={() => setMessage(null)}>
-              {t("dashboard.dismiss")}
+          <div className="mb-5 flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
+            <span className="text-slate-700">{message}</span>
+            <button className="cbr-btn cbr-btn-ghost cbr-btn-xs" onClick={() => setMessage(null)}>
+              <X size={14} />
             </button>
           </div>
         )}
 
+        {/* Empty state */}
         {reports.length === 0 ? (
-          <section className="rounded-lg border border-dashed border-base-300 bg-base-100 p-8 text-center">
-            <FileJson className="mx-auto mb-3 text-base-content/40" size={36} />
-            <h2 className="text-xl font-semibold">{t("dashboard.noReports")}</h2>
+          <section className="rounded-xl border-2 border-dashed border-slate-200 bg-white p-10 text-center">
+            <FileJson className="mx-auto mb-3 text-slate-300" size={40} />
+            <h2 className="text-lg font-semibold text-slate-700">{t("dashboard.noReports")}</h2>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
-              <button className="btn btn-primary gap-2" onClick={() => setShowCreateDialog(true)}>
-                <Plus size={18} />
+              <button className="cbr-btn cbr-btn-primary" onClick={() => openDialog("create")}>
+                <Plus size={16} />
                 {t("dashboard.createReport")}
               </button>
               <button
-                className="btn btn-outline gap-2"
+                className="cbr-btn cbr-btn-outline"
                 onClick={() => importInputRef.current?.click()}
               >
-                <Upload size={18} />
+                <Upload size={16} />
                 {t("dashboard.importBackup")}
               </button>
             </div>
@@ -243,77 +337,99 @@ export default function DashboardPage() {
             {reports.map((report) => (
               <article
                 key={report.id}
-                className="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm"
+                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-xl font-bold">
+                    <h2 className="text-lg font-bold text-slate-900">
                       {report.quarter} {report.year}
                     </h2>
-                    <p className="text-sm text-base-content/60">
+                    <p className="text-xs text-slate-400">
                       {t("dashboard.updated", {
                         date: new Date(report.updatedAt).toLocaleString(),
                       })}
                     </p>
                   </div>
-                  <span className="badge badge-outline shrink-0">{report.createdBy}</span>
+                  <span className="shrink-0 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600">
+                    {report.createdBy}
+                  </span>
                 </div>
 
                 <dl className="mb-5 grid grid-cols-3 gap-2 text-sm">
-                  <div className="rounded border border-base-300 p-2">
-                    <dt className="text-base-content/50">{t("dashboard.risks")}</dt>
-                    <dd className="font-semibold">{report.topRisks.length}</dd>
+                  <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5">
+                    <dt className="text-xs text-slate-400">{t("dashboard.risks")}</dt>
+                    <dd className="text-lg font-semibold text-slate-800">{report.topRisks.length}</dd>
                   </div>
-                  <div className="rounded border border-base-300 p-2">
-                    <dt className="text-base-content/50">{t("dashboard.kpis")}</dt>
-                    <dd className="font-semibold">{report.kpis.length}</dd>
+                  <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5">
+                    <dt className="text-xs text-slate-400">{t("dashboard.kpis")}</dt>
+                    <dd className="text-lg font-semibold text-slate-800">{report.kpis.length}</dd>
                   </div>
-                  <div className="rounded border border-base-300 p-2">
-                    <dt className="text-base-content/50">{t("dashboard.decisions")}</dt>
-                    <dd className="font-semibold">{report.decisionsRequired.length}</dd>
+                  <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5">
+                    <dt className="text-xs text-slate-400">{t("dashboard.decisions")}</dt>
+                    <dd className="text-lg font-semibold text-slate-800">{report.decisionsRequired.length}</dd>
                   </div>
                 </dl>
 
-                <div className="flex flex-wrap justify-end gap-2">
+                <div className="flex flex-wrap justify-end gap-1.5">
                   <button
-                    className="btn btn-outline btn-sm gap-1"
+                    className="cbr-btn cbr-btn-outline cbr-btn-sm"
                     onClick={() => navigateTo(`/editor/${encodeURIComponent(report.id)}`)}
                   >
-                    <Edit2 size={15} />
+                    <Edit2 size={14} />
                     {t("dashboard.edit")}
                   </button>
                   <button
-                    className="btn btn-primary btn-sm gap-1"
+                    className="cbr-btn cbr-btn-primary cbr-btn-sm"
                     onClick={() => navigateTo(`/slides/${encodeURIComponent(report.id)}`)}
                   >
-                    <Play size={15} />
+                    <Play size={14} />
                     {t("dashboard.view")}
                   </button>
                   <button
-                    className="btn btn-ghost btn-sm"
+                    className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon"
                     title={t("dashboard.duplicate")}
-                    onClick={() => void handleDuplicate(report)}
+                    onClick={() => openDialog("duplicate", report)}
                     disabled={busyReportId === report.id}
                   >
-                    <Copy size={15} />
+                    <Copy size={14} />
                   </button>
                   <button
-                    className="btn btn-ghost btn-sm"
+                    className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon"
+                    title={t("dashboard.changeQuarter")}
+                    onClick={() => openDialog("changeQuarter", report)}
+                    disabled={busyReportId === report.id}
+                  >
+                    <CalendarDays size={14} />
+                  </button>
+                  <button
+                    className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon"
+                    title={t("dashboard.exportPdf")}
+                    onClick={() => void handleExportPdf(report)}
+                    disabled={exportingReportId === report.id}
+                  >
+                    {exportingReportId === report.id ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <FileText size={14} />
+                    )}
+                  </button>
+                  <button
+                    className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon"
                     title={t("dashboard.exportReport")}
                     onClick={() => handleExportReport(report)}
                   >
-                    <Download size={15} />
+                    <Download size={14} />
                   </button>
                   <button
-                    className="btn btn-ghost btn-sm text-error"
+                    className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon text-red-500"
                     title={t("common.delete")}
                     onClick={() => void handleDelete(report)}
                     disabled={busyReportId === report.id}
                   >
                     {busyReportId === report.id ? (
-                      <span className="loading loading-spinner loading-xs" />
+                      <Loader2 size={14} className="animate-spin" />
                     ) : (
-                      <Trash2 size={15} />
+                      <Trash2 size={14} />
                     )}
                   </button>
                 </div>
@@ -323,22 +439,28 @@ export default function DashboardPage() {
         )}
       </section>
 
-      {showCreateDialog && (
-        <div className="modal modal-open">
-          <div className="modal-box w-full max-w-md rounded-lg">
-            <h2 className="mb-4 text-2xl font-semibold">{t("dashboard.createNewReport")}</h2>
-            <form onSubmit={handleCreateReport} className="space-y-4">
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">{t("dashboard.quarter")}</span>
+      {/* Quarter dialog (create / duplicate / change quarter) */}
+      {dialogMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
+            <h2 className="mb-1 text-lg font-semibold text-slate-900">{dialogTitle}</h2>
+            {dialogDesc && (
+              <p className="mb-4 text-sm text-slate-500">{dialogDesc}</p>
+            )}
+            {!dialogDesc && <div className="mb-4" />}
+            <form onSubmit={handleDialogSubmit} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  {t("dashboard.quarter")}
                 </label>
                 <select
                   value={formData.quarter}
-                  onChange={(event) =>
-                    setFormData({ ...formData, quarter: event.target.value })
-                  }
+                  onChange={(event) => {
+                    setFormData({ ...formData, quarter: event.target.value });
+                    setFormError(null);
+                  }}
                   required
-                  className="select select-bordered w-full"
+                  className="form-input"
                 >
                   <option value="">{t("dashboard.selectQuarter")}</option>
                   <option value="Q1">Q1</option>
@@ -348,40 +470,68 @@ export default function DashboardPage() {
                 </select>
               </div>
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">{t("dashboard.year")}</span>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  {t("dashboard.year")}
                 </label>
                 <input
                   type="number"
                   value={formData.year}
-                  onChange={(event) =>
-                    setFormData({ ...formData, year: Number(event.target.value) })
-                  }
+                  onChange={(event) => {
+                    setFormData({ ...formData, year: Number(event.target.value) });
+                    setFormError(null);
+                  }}
                   required
                   min="2000"
                   max="2100"
-                  className="input input-bordered w-full"
+                  className="form-input"
                 />
               </div>
 
-              <div className="modal-action gap-2">
+              {formError && (
+                <p className="text-sm text-red-600">{formError}</p>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  className="btn btn-ghost"
-                  onClick={() => setShowCreateDialog(false)}
+                  className="cbr-btn cbr-btn-ghost"
+                  onClick={closeDialog}
                 >
                   {t("common.cancel")}
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={!formData.quarter}>
-                  {t("dashboard.create")}
+                <button type="submit" className="cbr-btn cbr-btn-primary" disabled={!formData.quarter}>
+                  {dialogMode === "create"
+                    ? t("dashboard.create")
+                    : dialogMode === "duplicate"
+                      ? t("dashboard.duplicate")
+                      : t("common.save")}
                 </button>
               </div>
             </form>
           </div>
-          <form method="dialog" className="modal-backdrop">
-            <button onClick={() => setShowCreateDialog(false)}>{t("common.close")}</button>
-          </form>
+          <div
+            className="fixed inset-0 -z-10"
+            onClick={closeDialog}
+          />
+        </div>
+      )}
+
+      {/* Off-screen render for PDF export */}
+      {exportReport && (
+        <div
+          ref={exportRef}
+          aria-hidden
+          style={{
+            position: "fixed",
+            top: 0,
+            left: -100000,
+            width: SLIDE_WIDTH,
+            height: SLIDE_HEIGHT,
+            pointerEvents: "none",
+          }}
+        >
+          {exportSlide !== null && <SlideRenderer report={exportReport} slideIndex={exportSlide} />}
         </div>
       )}
     </main>

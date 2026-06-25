@@ -2,6 +2,7 @@ import { KPI, TrendDirection } from "@/types";
 import { createId } from "@/lib/reportFactory";
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
+import { X } from "lucide-react";
 
 interface KPIEditorProps {
   data: KPI[];
@@ -13,11 +14,9 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
   const currentYear = new Date().getFullYear();
   const quarters = [1, 2, 3, 4];
   const years = Array.from({ length: currentYear - 1999 }, (_, i) => 2000 + i);
-  
-  // Ensure data is an array
+
   const kpisData = data || [];
-  
-  // Track which KPIs have old data warnings
+
   const [warningStates, setWarningStates] = useState<{ [key: string]: boolean }>({});
 
   const addKPI = () => {
@@ -54,12 +53,12 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
 
   return (
     <div>
-      <h2>{t("ed.kpi.title")}</h2>
-      <p className="text-base-content/70 text-sm mb-5">{t("ed.kpi.desc")}</p>
+      <h2 className="text-lg font-semibold text-slate-900">{t("ed.kpi.title")}</h2>
+      <p className="text-sm text-slate-500 mb-5">{t("ed.kpi.desc")}</p>
 
       <div className="flex flex-col gap-6 mb-4">
         {kpisData.map((kpi) => (
-          <div key={kpi.id} className="bg-base-200 border border-base-300 rounded p-5">
+          <div key={kpi.id} className="rounded-lg border border-slate-200 bg-slate-50 p-5">
             {/* Main KPI Info Row */}
             <div className="flex gap-3 items-end mb-4">
               <input
@@ -67,32 +66,32 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
                 placeholder={t("ed.kpi.namePlaceholder")}
                 value={kpi.name}
                 onChange={(e) => updateKPI(kpi.id, { name: e.target.value })}
-                className="input input-bordered font-semibold text-base flex-1"
+                className="form-input font-semibold flex-1"
               />
               <input
                 type="text"
                 placeholder={t("ed.kpi.unitField")}
                 value={kpi.unit}
                 onChange={(e) => updateKPI(kpi.id, { unit: e.target.value })}
-                className="input input-bordered input-sm w-28"
+                className="form-input form-input-sm w-28"
               />
               <input
                 type="number"
                 placeholder={t("ed.kpi.currentValue")}
                 value={kpi.value}
                 onChange={(e) => updateKPI(kpi.id, { value: parseFloat(e.target.value) })}
-                className="input input-bordered input-sm w-24"
+                className="form-input form-input-sm w-24"
               />
               <select
                 value={kpi.trend}
                 onChange={(e) =>
                   updateKPI(kpi.id, { trend: e.target.value as TrendDirection })
                 }
-                className="select select-bordered select-sm w-24"
+                className="form-input form-input-sm w-24"
               >
-                <option value="up">📈 {t("ed.kpi.up")}</option>
-                <option value="stable">➡️ {t("ed.kpi.stable")}</option>
-                <option value="down">📉 {t("ed.kpi.down")}</option>
+                <option value="up">{t("ed.kpi.up")}</option>
+                <option value="stable">{t("ed.kpi.stable")}</option>
+                <option value="down">{t("ed.kpi.down")}</option>
               </select>
               <input
                 type="number"
@@ -101,39 +100,39 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
                 onChange={(e) =>
                   updateKPI(kpi.id, { targetValue: parseFloat(e.target.value) || undefined })
                 }
-                className="input input-bordered input-sm w-20"
+                className="form-input form-input-sm w-20"
               />
               <select
                 value={kpi.direction || "higher"}
                 onChange={(e) =>
                   updateKPI(kpi.id, { direction: e.target.value as "higher" | "lower" })
                 }
-                className="select select-bordered select-sm w-28"
+                className="form-input form-input-sm w-28"
                 title={t("ed.kpi.higherLowerTitle")}
               >
-                <option value="higher">⬆️ {t("ed.kpi.higherBetter")}</option>
-                <option value="lower">⬇️ {t("ed.kpi.lowerBetter")}</option>
+                <option value="higher">{t("ed.kpi.higherBetter")}</option>
+                <option value="lower">{t("ed.kpi.lowerBetter")}</option>
               </select>
               <button
                 onClick={() => deleteKPI(kpi.id)}
-                className="btn btn-error btn-sm"
+                className="cbr-btn cbr-btn-danger cbr-btn-sm"
               >
                 {t("common.delete")}
               </button>
             </div>
 
             {/* Historical Data Section */}
-            <div className="border-t border-base-300 pt-4">
-              <p className="text-xs font-semibold text-base-content/60 mb-3">
-                📊 {t("ed.kpi.historical")}
+            <div className="border-t border-slate-200 pt-4">
+              <p className="text-xs font-semibold text-slate-500 mb-3">
+                {t("ed.kpi.historical")}
               </p>
 
               {/* Historical Data Badges */}
               {kpi.historicalData && kpi.historicalData.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {kpi.historicalData.map((hist, idx) => (
-                    <div key={idx} className="badge badge-primary gap-2 py-3 px-3">
-                      <span className="text-xs font-semibold">
+                    <div key={idx} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white">
+                      <span>
                         {hist.quarter}: {hist.value}
                       </span>
                       <button
@@ -143,9 +142,9 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
                           );
                           updateKPI(kpi.id, { historicalData: updated });
                         }}
-                        className="btn btn-xs btn-ghost hover:bg-primary-focus h-5 w-5 p-0"
+                        className="rounded hover:bg-white/20 p-0.5"
                       >
-                        ×
+                        <X size={12} />
                       </button>
                     </div>
                   ))}
@@ -154,12 +153,12 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
 
               {/* Add Historical Data Inputs */}
               <div className="flex gap-2 items-end flex-wrap">
-                <div className="form-control flex-1 min-w-fit">
-                  <label className="label label-text label-text-sm">{t("ed.kpi.quarter")}</label>
+                <div className="flex-1 min-w-fit">
+                  <label className="mb-1 block text-xs font-medium text-slate-500">{t("ed.kpi.quarter")}</label>
                   <select
                     id={`quarter-sel-${kpi.id}`}
                     defaultValue="1"
-                    className="select select-bordered select-sm"
+                    className="form-input form-input-sm"
                   >
                     {quarters.map((q) => (
                       <option key={q} value={q}>
@@ -169,13 +168,13 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
                   </select>
                 </div>
 
-                <div className="form-control flex-1 min-w-fit">
-                  <label className="label label-text label-text-sm">{t("ed.kpi.year")}</label>
+                <div className="flex-1 min-w-fit">
+                  <label className="mb-1 block text-xs font-medium text-slate-500">{t("ed.kpi.year")}</label>
                   <select
                     id={`year-sel-${kpi.id}`}
                     defaultValue={currentYear}
                     onChange={(e) => handleYearChange(kpi.id, parseInt(e.target.value))}
-                    className="select select-bordered select-sm"
+                    className="form-input form-input-sm"
                   >
                     {years.map((year) => (
                       <option key={year} value={year}>
@@ -185,13 +184,13 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
                   </select>
                 </div>
 
-                <div className="form-control flex-1 min-w-fit">
-                  <label className="label label-text label-text-sm">{t("ed.kpi.value2")}</label>
+                <div className="flex-1 min-w-fit">
+                  <label className="mb-1 block text-xs font-medium text-slate-500">{t("ed.kpi.value2")}</label>
                   <input
                     type="number"
                     placeholder={t("ed.kpi.valuePlaceholder")}
                     id={`value-${kpi.id}`}
-                    className="input input-bordered input-sm"
+                    className="form-input form-input-sm"
                   />
                 </div>
 
@@ -221,13 +220,12 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
                       ];
                       updateKPI(kpi.id, { historicalData: newHist });
 
-                      // Reset inputs
                       quarterSel.value = "1";
                       yearSel.value = String(currentYear);
                       valueInput.value = "";
                     }
                   }}
-                  className="btn btn-primary btn-sm"
+                  className="cbr-btn cbr-btn-primary cbr-btn-sm"
                 >
                   {t("ed.kpi.addDataPoint")}
                 </button>
@@ -235,21 +233,8 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
 
               {/* Warning for old data */}
               {warningStates[kpi.id] && (
-                <div className="alert alert-warning mt-3 py-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="stroke-current shrink-0 h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 9v2m0 4v2m0-6a4 4 0 100 8 4 4 0 000-8z"
-                    ></path>
-                  </svg>
-                  <span className="text-sm">{t("ed.kpi.oldData")}</span>
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  {t("ed.kpi.oldData")}
                 </div>
               )}
             </div>
@@ -257,14 +242,12 @@ export default function KPIEditor({ data, onUpdate }: KPIEditorProps) {
         ))}
       </div>
 
-      <button onClick={addKPI} className="btn btn-success mt-4">
+      <button onClick={addKPI} className="cbr-btn cbr-btn-primary mt-4">
         {t("ed.kpi.add")}
       </button>
 
-      <div className="alert alert-info mt-5">
-        <div>
-          <span>{t("ed.kpi.tip")}</span>
-        </div>
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 mt-5">
+        {t("ed.kpi.tip")}
       </div>
     </div>
   );

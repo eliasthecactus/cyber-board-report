@@ -48,6 +48,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = settings.language;
   }, [settings.language]);
 
+  // Apply primary color as CSS custom properties.
+  useEffect(() => {
+    const root = document.documentElement;
+    const color = settings.primaryColor || "#1e3a5f";
+    root.style.setProperty("--color-primary", color);
+    root.style.setProperty("--color-ring", color);
+    // Derive a darker hover shade by mixing with black.
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    const darken = (v: number) => Math.round(v * 0.78).toString(16).padStart(2, "0");
+    root.style.setProperty("--color-primary-hover", `#${darken(r)}${darken(g)}${darken(b)}`);
+  }, [settings.primaryColor]);
+
   const update = useCallback(async (patch: Partial<AppSettings>) => {
     const next = { ...settingsRef.current, ...patch };
     settingsRef.current = next;

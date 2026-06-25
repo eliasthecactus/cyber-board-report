@@ -29,7 +29,6 @@
     "@tailwindcss/postcss": "^4.2.2",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.27",
-    "daisyui": "^5.5.19",
     "eslint": "^8.55.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",

@@ -36,17 +36,17 @@ export default function ComplianceEditor({
 
   return (
     <div>
-      <h2>{t("ed.compliance.title")}</h2>
-      <p className="text-base-content/70 text-sm mb-5">{t("ed.compliance.desc")}</p>
+      <h2 className="text-lg font-semibold text-slate-900">{t("ed.compliance.title")}</h2>
+      <p className="text-sm text-slate-500 mb-5">{t("ed.compliance.desc")}</p>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.compliance.statusLabel")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.compliance.statusLabel")}</span>
         </label>
         <select
           value={data.status}
           onChange={(e) => updateField("status", e.target.value as ComplianceAudit["status"])}
-          className="select select-bordered w-full"
+          className="form-input w-full"
         >
           <option value="compliant">{t("ed.compliance.status.compliant")}</option>
           <option value="compliant-with-exceptions">{t("ed.compliance.status.exceptions")}</option>
@@ -55,8 +55,8 @@ export default function ComplianceEditor({
       </div>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.compliance.findingsLabel")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.compliance.findingsLabel")}</span>
         </label>
         {data.findings.map((finding, idx) => (
           <div key={idx} className="flex gap-2.5 mb-2.5">
@@ -65,22 +65,22 @@ export default function ComplianceEditor({
               placeholder={t("ed.compliance.findingItem")}
               value={finding}
               onChange={(e) => updateFinding(idx, e.target.value)}
-              className="input input-bordered flex-1"
+              className="form-input flex-1"
             />
-            <button onClick={() => removeFinding(idx)} className="btn btn-error btn-sm">
+            <button onClick={() => removeFinding(idx)} className="cbr-btn cbr-btn-danger cbr-btn-sm">
               {t("common.remove")}
             </button>
           </div>
         ))}
-        <button onClick={addFinding} className="btn btn-success btn-sm">
+        <button onClick={addFinding} className="cbr-btn cbr-btn-primary cbr-btn-sm">
           <Plus size={16} className="mr-1" />
           {t("ed.compliance.addFinding")}
         </button>
       </div>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.compliance.gapsLabel")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.compliance.gapsLabel")}</span>
         </label>
         {data.gaps.map((gap, idx) => (
           <div key={idx} className="flex gap-2.5 mb-2.5">
@@ -89,20 +89,20 @@ export default function ComplianceEditor({
               placeholder={t("ed.compliance.gapItem")}
               value={gap}
               onChange={(e) => updateGap(idx, e.target.value)}
-              className="input input-bordered flex-1"
+              className="form-input flex-1"
             />
-            <button onClick={() => removeGap(idx)} className="btn btn-error btn-sm">
+            <button onClick={() => removeGap(idx)} className="cbr-btn cbr-btn-danger cbr-btn-sm">
               {t("common.remove")}
             </button>
           </div>
         ))}
-        <button onClick={addGap} className="btn btn-success btn-sm">
+        <button onClick={addGap} className="cbr-btn cbr-btn-primary cbr-btn-sm">
           <Plus size={16} className="mr-1" />
           {t("ed.compliance.addGap")}
         </button>
       </div>
 
-      <div className="alert alert-info mt-5">
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 mt-5">
         <div>
           <span>{t("ed.compliance.tip")}</span>
         </div>

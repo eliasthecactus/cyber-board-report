@@ -2,6 +2,7 @@ import type { AppSettings } from "@/types";
 
 // A widely-available, low-cost default. Users can change it in Settings.
 export const DEFAULT_OPENROUTER_MODEL = "openai/gpt-4o-mini";
+export const DEFAULT_PRIMARY_COLOR = "#1e3a5f";
 
 export function defaultSettings(): AppSettings {
   return {
@@ -10,6 +11,7 @@ export function defaultSettings(): AppSettings {
     openRouterModel: DEFAULT_OPENROUTER_MODEL,
     redactionRules: [],
     logo: "",
+    primaryColor: DEFAULT_PRIMARY_COLOR,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -37,5 +39,9 @@ export function normalizeSettings(input: Partial<AppSettings> | null | undefined
         )
       : [],
     logo: typeof input.logo === "string" ? input.logo : "",
+    primaryColor:
+      typeof input.primaryColor === "string" && /^#[0-9a-fA-F]{6}$/.test(input.primaryColor)
+        ? input.primaryColor
+        : base.primaryColor,
   };
 }

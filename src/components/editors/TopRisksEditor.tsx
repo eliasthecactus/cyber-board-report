@@ -31,8 +31,6 @@ export default function TopRisksEditor({ data, onUpdate }: TopRisksEditorProps) 
     onUpdate(data.filter((risk) => risk.id !== id));
   };
 
-  // Structured facts about a risk, given to the AI so it writes a description
-  // that is accurate for this specific risk rather than a generic summary.
   const riskAiContext = (risk: Risk): string =>
     [
       risk.name.trim() && `${t("ed.risks.nameLabel")}: ${risk.name.trim()}`,
@@ -45,38 +43,38 @@ export default function TopRisksEditor({ data, onUpdate }: TopRisksEditorProps) 
 
   return (
     <div>
-      <h2>{t("ed.risks.title")}</h2>
-      <p className="text-base-content/70 text-sm mb-5">{t("ed.risks.desc")}</p>
+      <h2 className="text-lg font-semibold text-slate-900">{t("ed.risks.title")}</h2>
+      <p className="text-sm text-slate-500 mb-5">{t("ed.risks.desc")}</p>
 
       <div className="flex flex-col gap-4 mb-4">
         {data.map((risk) => (
-          <div key={risk.id} className="bg-base-200 border border-base-300 rounded p-4">
+          <div key={risk.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
             <div className="flex gap-3 items-center mb-3">
               <input
                 type="text"
                 placeholder={t("ed.risks.namePlaceholder")}
                 value={risk.name}
                 onChange={(e) => updateRisk(risk.id, { name: e.target.value })}
-                className="input input-bordered font-semibold text-base flex-1"
+                className="form-input font-semibold flex-1"
               />
               <button
                 onClick={() => deleteRisk(risk.id)}
-                className="btn btn-sm btn-ghost text-error"
+                className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon text-red-500"
                 aria-label={t("common.delete")}
               >
-                <Trash2 size={16} />
+                <Trash2 size={15} />
               </button>
             </div>
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 mb-3">
               <label className="flex flex-col gap-1">
-                <span className="text-xs font-semibold text-base-content/60">
+                <span className="text-xs font-medium text-slate-500">
                   {t("ed.risks.likelihood")}
                 </span>
                 <select
                   value={risk.likelihood}
                   onChange={(e) => updateRisk(risk.id, { likelihood: e.target.value as Likelihood })}
-                  className="select select-bordered select-sm w-full"
+                  className="form-input form-input-sm"
                 >
                   <option value="low">{t("enum.low")}</option>
                   <option value="medium">{t("enum.medium")}</option>
@@ -86,7 +84,7 @@ export default function TopRisksEditor({ data, onUpdate }: TopRisksEditorProps) 
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-xs font-semibold text-base-content/60">
+                <span className="text-xs font-medium text-slate-500">
                   {t("ed.risks.impact")}
                 </span>
                 <select
@@ -94,7 +92,7 @@ export default function TopRisksEditor({ data, onUpdate }: TopRisksEditorProps) 
                   onChange={(e) =>
                     updateRisk(risk.id, { businessImpact: e.target.value as Impact })
                   }
-                  className="select select-bordered select-sm w-full"
+                  className="form-input form-input-sm"
                 >
                   <option value="low">{t("enum.low")}</option>
                   <option value="medium">{t("enum.medium")}</option>
@@ -104,13 +102,13 @@ export default function TopRisksEditor({ data, onUpdate }: TopRisksEditorProps) 
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-xs font-semibold text-base-content/60">
+                <span className="text-xs font-medium text-slate-500">
                   {t("ed.risks.trend")}
                 </span>
                 <select
                   value={risk.trend}
                   onChange={(e) => updateRisk(risk.id, { trend: e.target.value as Trend })}
-                  className="select select-bordered select-sm w-full"
+                  className="form-input form-input-sm"
                 >
                   <option value="improving">{t("enum.improving")}</option>
                   <option value="stable">{t("enum.stable")}</option>
@@ -131,13 +129,12 @@ export default function TopRisksEditor({ data, onUpdate }: TopRisksEditorProps) 
         ))}
       </div>
 
-      <button className="btn btn-success mt-4" onClick={addRisk}>
+      <button className="cbr-btn cbr-btn-primary mt-4" onClick={addRisk}>
         {t("ed.risks.add")}
       </button>
 
-      <div className="alert alert-info mt-5">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        <span>{t("ed.risks.tip")}</span>
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 mt-5">
+        {t("ed.risks.tip")}
       </div>
     </div>
   );

@@ -36,12 +36,12 @@ export default function SupplyChainEditor({
 
   return (
     <div>
-      <h2>{t("ed.supply.title")}</h2>
-      <p className="text-base-content/70 text-sm mb-5">{t("ed.supply.desc")}</p>
+      <h2 className="text-lg font-semibold text-slate-900">{t("ed.supply.title")}</h2>
+      <p className="text-sm text-slate-500 mb-5">{t("ed.supply.desc")}</p>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.supply.risksLabel")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.supply.risksLabel")}</span>
         </label>
         {data.risks.map((risk, idx) => (
           <div key={idx} className="flex gap-2.5 mb-2.5">
@@ -50,22 +50,22 @@ export default function SupplyChainEditor({
               placeholder={t("ed.supply.riskItem")}
               value={risk}
               onChange={(e) => updateRisk(idx, e.target.value)}
-              className="input input-bordered flex-1"
+              className="form-input flex-1"
             />
-            <button className="btn btn-error btn-sm" onClick={() => removeRisk(idx)}>
+            <button className="cbr-btn cbr-btn-danger cbr-btn-sm" onClick={() => removeRisk(idx)}>
               {t("common.remove")}
             </button>
           </div>
         ))}
-        <button onClick={addRisk} className="btn btn-success btn-sm">
+        <button onClick={addRisk} className="cbr-btn cbr-btn-primary cbr-btn-sm">
           <Plus size={16} className="mr-1" />
           {t("ed.supply.addRisk")}
         </button>
       </div>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.supply.assessmentLabel")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.supply.assessmentLabel")}</span>
         </label>
         <AiTextarea
           aiLabel={t("ed.supply.assessmentLabel")}
@@ -76,8 +76,7 @@ export default function SupplyChainEditor({
         />
       </div>
 
-      <div className="alert alert-info mt-5">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 mt-5">
         <span>{t("ed.supply.tip")}</span>
       </div>
     </div>

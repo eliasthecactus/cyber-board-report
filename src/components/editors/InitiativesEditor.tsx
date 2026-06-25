@@ -33,23 +33,23 @@ export default function InitiativesEditor({
 
   return (
     <div>
-      <h2>{t("ed.init.title")}</h2>
-      <p className="text-base-content/70 text-sm mb-5">{t("ed.init.desc")}</p>
+      <h2 className="text-lg font-semibold text-slate-900">{t("ed.init.title")}</h2>
+      <p className="text-sm text-slate-500 mb-5">{t("ed.init.desc")}</p>
 
       <div className="flex flex-col gap-4 mb-4">
         {data.map((initiative) => (
-          <div key={initiative.id} className="bg-base-200 border border-base-300 rounded p-4">
+          <div key={initiative.id} className="bg-slate-50 border border-slate-200 rounded p-4">
             <div className="flex gap-3 items-start">
               <input
                 type="text"
                 placeholder={t("ed.init.namePlaceholder")}
                 value={initiative.name}
                 onChange={(e) => updateInitiative(initiative.id, { name: e.target.value })}
-                className="input input-bordered font-semibold text-base flex-1"
+                className="form-input font-semibold text-base flex-1"
               />
               <button
                 onClick={() => deleteInitiative(initiative.id)}
-                className="btn btn-error btn-sm"
+                className="cbr-btn cbr-btn-danger cbr-btn-sm"
               >
                 {t("common.delete")}
               </button>
@@ -57,8 +57,8 @@ export default function InitiativesEditor({
 
             <div className="mt-2.5 grid gap-2.5">
               <div>
-                <label className="label">
-                  <span className="label-text font-semibold">{t("ed.init.status")}</span>
+                <label>
+                  <span className="text-sm font-medium text-slate-700 font-semibold">{t("ed.init.status")}</span>
                 </label>
                 <select
                   value={initiative.status}
@@ -67,7 +67,7 @@ export default function InitiativesEditor({
                       status: e.target.value as InitiativeStatus,
                     })
                   }
-                  className="select select-bordered w-full"
+                  className="form-input w-full"
                 >
                   <option value="on-track">{t("ed.init.status.onTrack")}</option>
                   <option value="at-risk">{t("ed.init.status.atRisk")}</option>
@@ -76,8 +76,8 @@ export default function InitiativesEditor({
               </div>
 
               <div>
-                <label className="label">
-                  <span className="label-text font-semibold">
+                <label>
+                  <span className="text-sm font-medium text-slate-700 font-semibold">
                     {t("ed.init.progressLabel", { value: initiative.progress })}
                   </span>
                 </label>
@@ -91,13 +91,13 @@ export default function InitiativesEditor({
                       progress: parseInt(e.target.value),
                     })
                   }
-                  className="range range-sm w-full"
+                  className="w-full accent-primary"
                 />
               </div>
 
               <div>
-                <label className="label">
-                  <span className="label-text font-semibold">{t("ed.init.blockersOptional")}</span>
+                <label>
+                  <span className="text-sm font-medium text-slate-700 font-semibold">{t("ed.init.blockersOptional")}</span>
                 </label>
                 <AiTextarea
                   aiLabel={t("ed.init.blockersLabel")}
@@ -112,11 +112,11 @@ export default function InitiativesEditor({
         ))}
       </div>
 
-      <button onClick={addInitiative} className="btn btn-success mt-4">
+      <button onClick={addInitiative} className="cbr-btn cbr-btn-primary mt-4">
         {t("ed.init.add")}
       </button>
 
-      <div className="alert alert-info mt-5">
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 mt-5">
         <div>
           <span>{t("ed.init.tip")}</span>
         </div>

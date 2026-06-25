@@ -13,12 +13,12 @@ export default function ExecutiveSummaryEditor({
   const t = useT();
   return (
     <div>
-      <h2>{t("ed.exec.title")}</h2>
-      <p className="text-base-content/70 text-sm mb-5">{t("ed.exec.desc")}</p>
+      <h2 className="text-lg font-semibold text-slate-900">{t("ed.exec.title")}</h2>
+      <p className="text-sm text-slate-500 mb-5">{t("ed.exec.desc")}</p>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text font-semibold">{t("ed.exec.label")}</span>
+        <label className="mb-1.5 block text-sm font-medium text-slate-700">
+          {t("ed.exec.label")}
         </label>
         <AiTextarea
           value={data}
@@ -29,10 +29,8 @@ export default function ExecutiveSummaryEditor({
         />
       </div>
 
-      <div className="alert alert-info mt-5">
-        <div>
-          <span>{t("ed.exec.tip")}</span>
-        </div>
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+        {t("ed.exec.tip")}
       </div>
     </div>
   );

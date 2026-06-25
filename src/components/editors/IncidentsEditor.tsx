@@ -54,26 +54,26 @@ export default function IncidentsEditor({
 
   return (
     <div>
-      <h2>{t("ed.inc.title")}</h2>
-      <p className="text-base-content/70 text-sm mb-5">{t("ed.inc.desc")}</p>
+      <h2 className="text-lg font-semibold text-slate-900">{t("ed.inc.title")}</h2>
+      <p className="text-sm text-slate-500 mb-5">{t("ed.inc.desc")}</p>
 
       <div className="flex flex-col gap-4 mb-4">
         {data.map((incident) => (
-          <div key={incident.id} className="bg-base-200 border border-base-300 rounded p-4">
+          <div key={incident.id} className="bg-slate-50 border border-slate-200 rounded p-4">
             <div className="flex gap-3 items-start">
               <input
                 type="text"
                 placeholder={t("ed.inc.titlePlaceholder")}
                 value={incident.title}
                 onChange={(e) => updateIncident(incident.id, { title: e.target.value })}
-                className="input input-bordered font-semibold text-base flex-1"
+                className="form-input font-semibold text-base flex-1"
               />
               <select
                 value={incident.severity || "medium"}
                 onChange={(e) =>
                   updateIncident(incident.id, { severity: e.target.value as Incident["severity"] })
                 }
-                className="select select-bordered w-36"
+                className="form-input w-36"
               >
                 <option value="low">{t("ed.inc.severity.low")}</option>
                 <option value="medium">{t("ed.inc.severity.medium")}</option>
@@ -82,7 +82,7 @@ export default function IncidentsEditor({
               </select>
               <button
                 onClick={() => deleteIncident(incident.id)}
-                className="btn btn-error btn-sm"
+                className="cbr-btn cbr-btn-danger cbr-btn-sm"
               >
                 {t("common.delete")}
               </button>
@@ -90,8 +90,8 @@ export default function IncidentsEditor({
 
             <div className="mt-2.5 grid gap-2.5">
               <div>
-                <label className="label">
-                  <span className="label-text font-semibold">{t("ed.inc.impactLabel")}</span>
+                <label>
+                  <span className="text-sm font-medium text-slate-700 font-semibold">{t("ed.inc.impactLabel")}</span>
                 </label>
                 <AiTextarea
                   aiLabel={t("ed.inc.impactLabel")}
@@ -106,8 +106,8 @@ export default function IncidentsEditor({
               </div>
 
               <div>
-                <label className="label">
-                  <span className="label-text font-semibold">{t("ed.inc.outcomeLabel")}</span>
+                <label>
+                  <span className="text-sm font-medium text-slate-700 font-semibold">{t("ed.inc.outcomeLabel")}</span>
                 </label>
                 <AiTextarea
                   aiLabel={t("ed.inc.outcomeLabel")}
@@ -120,8 +120,8 @@ export default function IncidentsEditor({
               </div>
 
               <div>
-                <label className="label">
-                  <span className="label-text font-semibold">{t("ed.inc.lessonsLabel")}</span>
+                <label>
+                  <span className="text-sm font-medium text-slate-700 font-semibold">{t("ed.inc.lessonsLabel")}</span>
                 </label>
                 <AiTextarea
                   aiLabel={t("ed.inc.lessonsLabel")}
@@ -139,11 +139,11 @@ export default function IncidentsEditor({
         ))}
       </div>
 
-      <button onClick={addIncident} className="btn btn-success mt-4">
+      <button onClick={addIncident} className="cbr-btn cbr-btn-primary mt-4">
         {t("ed.inc.add")}
       </button>
 
-      <div className="alert alert-info mt-5">
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 mt-5">
         <div>
           <span>{t("ed.inc.tip")}</span>
         </div>

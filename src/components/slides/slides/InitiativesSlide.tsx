@@ -1,81 +1,110 @@
 import { Report } from "@/types";
-import { AlertCircle, CheckCircle2, Clock, Target } from "lucide-react";
+import { Target } from "lucide-react";
+import { BarChart, Bar, XAxis, Cell, ResponsiveContainer } from "recharts";
 import { useT } from "@/lib/i18n";
 import { SlideFrame } from "../SlideFrame";
-import { ACCENTS } from "../slideConstants";
+import { usePrimaryColor } from "../slideConstants";
 
 interface InitiativesSlideProps {
   report: Report;
 }
 
-const statusConfig: Record<string, { color: string; icon: typeof CheckCircle2 }> = {
-  "on-track": { color: "#16a34a", icon: CheckCircle2 },
-  "at-risk": { color: "#ea580c", icon: AlertCircle },
-  delayed: { color: "#dc2626", icon: AlertCircle },
-  "not-started": { color: "#6b7280", icon: Clock },
+const statusColor: Record<string, string> = {
+  "on-track": "#065f46",
+  "at-risk": "#92400e",
+  delayed: "#9f1239",
+  "not-started": "#94a3b8",
 };
 
 const MAX_INITIATIVES = 5;
 
 export default function InitiativesSlide({ report }: InitiativesSlideProps) {
   const t = useT();
-  const accent = ACCENTS.initiatives;
+  const accent = usePrimaryColor();
   const initiatives = report.initiatives.slice(0, MAX_INITIATIVES);
+
+  const statusCounts = {
+    "on-track": report.initiatives.filter((i) => i.status === "on-track").length,
+    "at-risk": report.initiatives.filter((i) => i.status === "at-risk").length,
+    delayed: report.initiatives.filter((i) => i.status === "delayed").length,
+    "not-started": report.initiatives.filter((i) => i.status === "not-started").length,
+  };
+  const chartData = Object.entries(statusCounts)
+    .filter(([, count]) => count > 0)
+    .map(([status, count]) => ({
+      name: t(`slide.status.${status}`),
+      value: count,
+      color: statusColor[status] || "#94a3b8",
+    }));
 
   return (
     <SlideFrame report={report} accent={accent} title={t("slide.initiatives.title")} icon={Target}>
       {report.initiatives.length === 0 ? (
-        <p className="text-[20px] text-slate-400">{t("slide.initiatives.none")}</p>
+        <p className="text-[15px] italic text-slate-400">{t("slide.initiatives.none")}</p>
       ) : (
-        <div className="flex h-full flex-col justify-center gap-3">
-          {initiatives.map((init) => {
-            const config = statusConfig[init.status] || statusConfig["on-track"];
-            const Icon = config.icon;
-            return (
-              <div
-                key={init.id}
-                className="rounded-xl border border-slate-100 bg-slate-50 p-4"
-              >
-                <div className="mb-2.5 flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                      style={{ backgroundColor: `${config.color}20`, color: config.color }}
-                    >
-                      <Icon size={20} />
-                    </span>
+        <div className="flex h-full gap-5">
+          <div className="flex flex-1 flex-col justify-center gap-2.5">
+            {initiatives.map((init) => {
+              const color = statusColor[init.status] || statusColor["on-track"];
+              return (
+                <div key={init.id} className="rounded-lg bg-slate-50 p-3.5">
+                  <div className="mb-2 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="m-0 truncate text-[18px] font-semibold text-slate-900">
+                      <h3 className="m-0 truncate text-[15px] font-semibold text-slate-900">
                         {init.name}
                       </h3>
                       {init.blockers && (
-                        <p className="m-0 truncate text-[14px] text-slate-500">
+                        <p className="m-0 truncate text-[12px] text-slate-500">
                           {t("slide.initiatives.blockers", { text: init.blockers })}
                         </p>
                       )}
                     </div>
+                    <span
+                      className="shrink-0 rounded px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white"
+                      style={{ backgroundColor: color }}
+                    >
+                      {t(`slide.status.${init.status}`)}
+                    </span>
                   </div>
-                  <span
-                    className="shrink-0 rounded-full px-3 py-1 text-[13px] font-semibold text-white"
-                    style={{ backgroundColor: config.color }}
-                  >
-                    {t(`slide.status.${init.status}`)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${init.progress}%`, backgroundColor: config.color }}
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${init.progress}%`, backgroundColor: color }}
+                      />
+                    </div>
+                    <span className="w-10 shrink-0 text-right text-[13px] font-bold text-slate-600 tabular-nums">
+                      {init.progress}%
+                    </span>
                   </div>
-                  <span className="w-12 shrink-0 text-right text-[15px] font-bold text-slate-600 tabular-nums">
-                    {init.progress}%
-                  </span>
                 </div>
+              );
+            })}
+          </div>
+
+          {chartData.length > 0 && (
+            <div className="flex w-[200px] shrink-0 flex-col items-center justify-center rounded-lg bg-slate-50 p-4">
+              <p className="m-0 mb-2 text-[13px] font-bold uppercase tracking-wider text-slate-400">
+                {t("slide.initiatives.title")}
+              </p>
+              <div className="h-[160px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 4 }}>
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} interval={0} />
+                    <Bar dataKey="value" radius={[3, 3, 0, 0]} isAnimationActive={false}>
+                      {chartData.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-            );
-          })}
+              <p className="m-0 mt-1 text-[20px] font-bold text-slate-900">
+                {report.initiatives.length}
+              </p>
+              <p className="m-0 text-[11px] uppercase tracking-wider text-slate-400">Total</p>
+            </div>
+          )}
         </div>
       )}
     </SlideFrame>

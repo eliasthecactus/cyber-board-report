@@ -15,12 +15,12 @@ export default function BudgetEditor({ data, onUpdate }: BudgetEditorProps) {
 
   return (
     <div>
-      <h2>{t("ed.budget.title")}</h2>
-      <p className="text-base-content/60 text-sm mb-5">{t("ed.budget.desc")}</p>
+      <h2 className="text-lg font-semibold text-slate-900">{t("ed.budget.title")}</h2>
+      <p className="text-sm text-slate-500 mb-5">{t("ed.budget.desc")}</p>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.budget.budgetLabel")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.budget.budgetLabel")}</span>
         </label>
         <AiTextarea
           aiLabel={t("ed.budget.budgetLabel")}
@@ -32,8 +32,8 @@ export default function BudgetEditor({ data, onUpdate }: BudgetEditorProps) {
       </div>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.budget.allocationLabel")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.budget.allocationLabel")}</span>
         </label>
         <AiTextarea
           aiLabel={t("ed.budget.allocationLabel")}
@@ -45,8 +45,8 @@ export default function BudgetEditor({ data, onUpdate }: BudgetEditorProps) {
       </div>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.budget.constraintsLabel")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.budget.constraintsLabel")}</span>
         </label>
         <AiTextarea
           aiLabel={t("ed.budget.constraintsLabel")}
@@ -57,7 +57,7 @@ export default function BudgetEditor({ data, onUpdate }: BudgetEditorProps) {
         />
       </div>
 
-      <div className="alert alert-info mt-5">
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 mt-5">
         <div>
           <span>{t("ed.budget.tip")}</span>
         </div>

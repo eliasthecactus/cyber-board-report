@@ -1,9 +1,37 @@
 @import "tailwindcss";
-@plugin "daisyui" {
-  themes: light --default;
+@import "tw-animate-css";
+
+/* ── Corporate design tokens ─────────────────────────────────────────────── */
+
+@theme {
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0f172a;
+  --color-primary: #1e3a5f;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f1f5f9;
+  --color-secondary-foreground: #334155;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+  --color-accent: #f1f5f9;
+  --color-accent-foreground: #0f172a;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e2e8f0;
+  --color-input: #cbd5e1;
+  --color-ring: #1e3a5f;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.75rem;
+  --font-heading: "Noto Sans Display", system-ui, sans-serif;
 }
 
-/* Noto Sans Display (variable: weight 100-900, width 62.5-100) */
+/* ── Fonts ────────────────────────────────────────────────────────────────── */
+
 @font-face {
   font-family: "Noto Sans Display";
   src: url("../assets/fonts/NotoSansDisplay.ttf") format("truetype");
@@ -20,6 +48,8 @@
   font-style: italic;
   font-display: swap;
 }
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
 
 :root {
   color-scheme: light;
@@ -40,7 +70,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: #f6f7f9;
+  background: var(--color-background);
+  color: var(--color-foreground);
 }
 
 button,
@@ -51,9 +82,122 @@ textarea {
   letter-spacing: 0;
 }
 
+/* ── App shell ────────────────────────────────────────────────────────────── */
+
 .app-shell {
   min-height: 100vh;
-  background:
-    linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.96)),
-    #f6f7f9;
+  background: var(--color-background);
+}
+
+/* ── Form elements ────────────────────────────────────────────────────────── */
+
+.form-input {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background: white;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--color-foreground);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+.form-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.form-input-sm {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.8125rem;
+}
+
+select.form-input {
+  appearance: auto;
+}
+
+textarea.form-input {
+  resize: vertical;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+.cbr-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  padding: 0.5rem 1rem;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.cbr-btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.cbr-btn-primary {
+  background: var(--color-primary);
+  color: white;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+}
+.cbr-btn-primary:hover {
+  background: var(--color-primary-hover, #162d4a);
+}
+.cbr-btn-outline {
+  border-color: var(--color-border);
+  background: white;
+  color: var(--color-foreground);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+}
+.cbr-btn-outline:hover {
+  background: var(--color-secondary);
+}
+.cbr-btn-ghost {
+  background: transparent;
+  color: var(--color-muted-foreground);
+}
+.cbr-btn-ghost:hover {
+  background: var(--color-secondary);
+  color: var(--color-foreground);
+}
+.cbr-btn-danger {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+.cbr-btn-danger:hover {
+  background: #fee2e2;
+}
+.cbr-btn-success {
+  background: #059669;
+  color: white;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+}
+.cbr-btn-success:hover {
+  background: #047857;
+}
+.cbr-btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+}
+.cbr-btn-xs {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  gap: 0.25rem;
+}
+.cbr-btn-icon {
+  padding: 0.375rem;
+  width: 2rem;
+  height: 2rem;
 }

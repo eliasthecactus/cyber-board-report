@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { navigateTo, useHashRoute } from "@/lib/navigation";
 import { useT } from "@/lib/i18n";
 
@@ -46,12 +46,12 @@ export default function App() {
 
   return (
     <main className="app-shell flex min-h-screen items-center justify-center p-6">
-      <section className="w-full max-w-md rounded-lg border border-base-300 bg-base-100 p-6 shadow-sm">
+      <section className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center gap-3">
-          <AlertTriangle className="text-warning" size={24} />
-          <h1 className="text-xl font-bold">{t("notFound.title")}</h1>
+          <AlertTriangle className="text-amber-500" size={24} />
+          <h1 className="text-xl font-bold text-slate-900">{t("notFound.title")}</h1>
         </div>
-        <button className="btn btn-primary" onClick={() => navigateTo("/")}>
+        <button className="cbr-btn cbr-btn-primary" onClick={() => navigateTo("/")}>
           {t("notFound.back")}
         </button>
       </section>
@@ -62,7 +62,7 @@ export default function App() {
 function AppLoading() {
   return (
     <main className="app-shell flex min-h-screen items-center justify-center">
-      <span className="loading loading-spinner loading-lg" aria-label="Loading" />
+      <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
     </main>
   );
 }

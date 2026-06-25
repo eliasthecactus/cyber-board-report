@@ -9,13 +9,7 @@ import { assistText, type AiAction } from "@/lib/openrouter";
 interface AiTextareaProps extends Omit<ComponentProps<"textarea">, "value" | "onChange"> {
   value: string;
   onValueChange: (value: string) => void;
-  /** Human-readable name of this field, used in the AI prompt. */
   aiLabel: string;
-  /**
-   * Structured facts about the specific item this field belongs to (e.g. the
-   * risk's name, likelihood, impact and trend). Lets the AI write accurate,
-   * specific text instead of a generic summary.
-   */
   aiContext?: string;
 }
 
@@ -71,76 +65,76 @@ export function AiTextarea({
       <textarea
         value={value}
         onChange={(event) => onValueChange(event.target.value)}
-        className={cn("textarea textarea-bordered w-full", className)}
+        className={cn("form-input", className)}
         {...textareaProps}
         disabled={busy !== null || textareaProps.disabled}
       />
 
       {aiEnabled && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <div className="mt-1.5 flex flex-wrap items-center gap-1">
           <button
             type="button"
-            className="btn btn-xs btn-ghost gap-1"
+            className="cbr-btn cbr-btn-ghost cbr-btn-xs"
             onClick={() => void run("fill")}
             disabled={busy !== null}
             title={t("ai.fillTitle")}
           >
-            <Sparkles size={13} />
+            <Sparkles size={12} />
             {t("ai.fill")}
           </button>
           <button
             type="button"
-            className="btn btn-xs btn-ghost gap-1"
+            className="cbr-btn cbr-btn-ghost cbr-btn-xs"
             onClick={() => void run("rephrase")}
             disabled={busy !== null || !hasText}
             title={t("ai.rephraseTitle")}
           >
-            <RefreshCw size={13} />
+            <RefreshCw size={12} />
             {t("ai.rephrase")}
           </button>
           <button
             type="button"
-            className="btn btn-xs btn-ghost gap-1"
+            className="cbr-btn cbr-btn-ghost cbr-btn-xs"
             onClick={() => void run("summarize")}
             disabled={busy !== null || !hasText}
             title={t("ai.summarizeTitle")}
           >
-            <Minimize2 size={13} />
+            <Minimize2 size={12} />
             {t("ai.summarize")}
           </button>
           <button
             type="button"
-            className="btn btn-xs btn-ghost gap-1"
+            className="cbr-btn cbr-btn-ghost cbr-btn-xs"
             onClick={() => void run("extend")}
             disabled={busy !== null || !hasText}
             title={t("ai.extendTitle")}
           >
-            <Maximize2 size={13} />
+            <Maximize2 size={12} />
             {t("ai.extend")}
           </button>
 
           {previous !== null && busy === null && (
             <button
               type="button"
-              className="btn btn-xs btn-ghost gap-1"
+              className="cbr-btn cbr-btn-ghost cbr-btn-xs"
               onClick={undo}
               title={t("ai.undo")}
             >
-              <Undo2 size={13} />
+              <Undo2 size={12} />
               {t("ai.undo")}
             </button>
           )}
 
           {busy !== null && (
-            <span className="flex items-center gap-1 text-xs text-base-content/60">
-              <Loader2 size={13} className="animate-spin" />
+            <span className="flex items-center gap-1 text-xs text-slate-400">
+              <Loader2 size={12} className="animate-spin" />
               {t("ai.working")}
             </span>
           )}
         </div>
       )}
 
-      {error && <p className="mt-1 text-xs text-error">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );
 }

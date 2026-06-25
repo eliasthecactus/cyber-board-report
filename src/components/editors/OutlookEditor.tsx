@@ -10,12 +10,12 @@ export default function OutlookEditor({ data, onUpdate }: OutlookEditorProps) {
   const t = useT();
   return (
     <div>
-      <h2>{t("ed.outlook.title")}</h2>
-      <p className="text-base-content/70 text-sm mb-5">{t("ed.outlook.desc")}</p>
+      <h2 className="text-lg font-semibold text-slate-900">{t("ed.outlook.title")}</h2>
+      <p className="text-sm text-slate-500 mb-5">{t("ed.outlook.desc")}</p>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.outlook.label")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.outlook.label")}</span>
         </label>
         <AiTextarea
           value={data}
@@ -26,7 +26,7 @@ export default function OutlookEditor({ data, onUpdate }: OutlookEditorProps) {
         />
       </div>
 
-      <div className="alert alert-info mt-5">
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 mt-5">
         <div>
           <span>{t("ed.outlook.tip")}</span>
         </div>

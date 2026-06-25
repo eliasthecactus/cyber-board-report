@@ -13,12 +13,12 @@ export default function ThreatLandscapeEditor({
   const t = useT();
   return (
     <div>
-      <h2>{t("ed.threat.title")}</h2>
-      <p className="text-base-content/70 text-sm mb-5">{t("ed.threat.desc")}</p>
+      <h2 className="text-lg font-semibold text-slate-900">{t("ed.threat.title")}</h2>
+      <p className="text-sm text-slate-500 mb-5">{t("ed.threat.desc")}</p>
 
       <div className="mb-5">
-        <label className="label">
-          <span className="label-text">{t("ed.threat.label")}</span>
+        <label>
+          <span className="text-sm font-medium text-slate-700">{t("ed.threat.label")}</span>
         </label>
         <AiTextarea
           value={data}
@@ -29,7 +29,7 @@ export default function ThreatLandscapeEditor({
         />
       </div>
 
-      <div className="alert alert-info mt-5">
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 mt-5">
         <div>
           <span>{t("ed.threat.tip")}</span>
         </div>

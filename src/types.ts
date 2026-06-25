@@ -137,6 +137,8 @@ export interface AppSettings {
   redactionRules: RedactionRule[];
   /** Optional company logo (data URL) shown on every presentation slide. */
   logo: string;
+  /** Primary brand color used across the app and slides (hex). */
+  primaryColor: string;
   updatedAt: string;
 }
 
