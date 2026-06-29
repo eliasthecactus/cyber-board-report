@@ -60,32 +60,38 @@ export default function IncidentsEditor({
       <div className="flex flex-col gap-4 mb-4">
         {data.map((incident) => (
           <div key={incident.id} className="bg-slate-50 border border-slate-200 rounded p-4">
-            <div className="flex gap-3 items-start">
+            <div>
               <input
                 type="text"
                 placeholder={t("ed.inc.titlePlaceholder")}
                 value={incident.title}
                 onChange={(e) => updateIncident(incident.id, { title: e.target.value })}
-                className="form-input font-semibold text-base flex-1"
+                className="form-input font-semibold text-base w-full mb-2"
               />
-              <select
-                value={incident.severity || "medium"}
-                onChange={(e) =>
-                  updateIncident(incident.id, { severity: e.target.value as Incident["severity"] })
-                }
-                className="form-input w-36"
-              >
-                <option value="low">{t("ed.inc.severity.low")}</option>
-                <option value="medium">{t("ed.inc.severity.medium")}</option>
-                <option value="high">{t("ed.inc.severity.high")}</option>
-                <option value="critical">{t("ed.inc.severity.critical")}</option>
-              </select>
-              <button
-                onClick={() => deleteIncident(incident.id)}
-                className="cbr-btn cbr-btn-danger cbr-btn-sm"
-              >
-                {t("common.delete")}
-              </button>
+
+              <div className="flex items-center gap-3">
+                <select
+                  value={incident.severity || "medium"}
+                  onChange={(e) =>
+                    updateIncident(incident.id, { severity: e.target.value as Incident["severity"] })
+                  }
+                  className="form-input w-36"
+                >
+                  <option value="low">{t("ed.inc.severity.low")}</option>
+                  <option value="medium">{t("ed.inc.severity.medium")}</option>
+                  <option value="high">{t("ed.inc.severity.high")}</option>
+                  <option value="critical">{t("ed.inc.severity.critical")}</option>
+                </select>
+
+                <div className="ml-auto">
+                  <button
+                    onClick={() => deleteIncident(incident.id)}
+                    className="cbr-btn cbr-btn-danger cbr-btn-sm"
+                  >
+                    {t("common.delete")}
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="mt-2.5 grid gap-2.5">

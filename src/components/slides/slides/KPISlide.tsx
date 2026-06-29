@@ -59,6 +59,12 @@ export default function KPISlide({ report }: KPISlideProps) {
         <div className="grid h-full grid-cols-3 grid-rows-2 gap-3">
           {kpis.map((kpi) => {
             const history = sortHistorical(kpi.historicalData);
+            const currentLabel = `${report.quarter}-${report.year}`;
+            // If current report quarter isn't already in history, include the current value as the latest point
+            const hasCurrent = history.some((h) => h.quarter === currentLabel);
+            const plotData = hasCurrent
+              ? history
+              : [...history, { quarter: currentLabel, value: kpi.value }];
             return (
               <div
                 key={kpi.id}
@@ -81,10 +87,10 @@ export default function KPISlide({ report }: KPISlideProps) {
                     </span>
                   )}
                 </div>
-                {history.length >= 2 && (
+                {plotData.length >= 2 && (
                   <div className="mt-auto h-[60px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={history} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                      <LineChart data={plotData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                         <XAxis dataKey="quarter" tick={{ fontSize: 9, fill: "#94a3b8" }} interval="preserveStartEnd" />
                         {kpi.targetValue !== undefined && (

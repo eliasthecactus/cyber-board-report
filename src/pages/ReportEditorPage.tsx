@@ -250,7 +250,7 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
       </header>
 
       {/* Body */}
-      <section className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+      <section className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         {/* Sidebar */}
         <aside className="lg:sticky lg:top-20 lg:self-start">
           <nav className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -318,6 +318,8 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
             <KPIEditor
               data={report.kpis}
               onUpdate={(data) => handleSectionUpdate("kpis", data)}
+              reportQuarter={report.quarter}
+              reportYear={report.year}
             />
           )}
           {activeSection === "incidents" && (
