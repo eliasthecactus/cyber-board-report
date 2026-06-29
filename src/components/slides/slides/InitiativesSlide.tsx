@@ -42,8 +42,8 @@ export default function InitiativesSlide({ report }: InitiativesSlideProps) {
       {report.initiatives.length === 0 ? (
         <p className="text-[15px] italic text-slate-400">{t("slide.initiatives.none")}</p>
       ) : (
-        <div className="flex h-full gap-5">
-          <div className="flex flex-1 flex-col justify-center gap-2.5">
+        <div className="flex h-full min-h-0 gap-4 overflow-hidden">
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-2.5">
             {initiatives.map((init) => {
               const color = statusColor[init.status] || statusColor["on-track"];
               return (
@@ -83,14 +83,20 @@ export default function InitiativesSlide({ report }: InitiativesSlideProps) {
           </div>
 
           {chartData.length > 0 && (
-            <div className="flex w-[200px] shrink-0 flex-col items-center justify-center rounded-lg bg-slate-50 p-4">
+            <div className="flex w-[170px] min-w-[170px] shrink-0 flex-col items-center justify-center rounded-lg bg-slate-50 p-3">
               <p className="m-0 mb-2 text-[13px] font-bold uppercase tracking-wider text-slate-400">
                 {t("slide.initiatives.title")}
               </p>
-              <div className="h-[160px] w-full">
+              <div className="h-[140px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 4 }}>
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} interval={0} />
+                  <BarChart data={chartData} margin={{ top: 4, right: 6, left: 0, bottom: 4 }}>
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 9, fill: "#64748b" }}
+                      tickLine={false}
+                      axisLine={false}
+                      interval={0}
+                    />
                     <Bar dataKey="value" radius={[3, 3, 0, 0]} isAnimationActive={false}>
                       {chartData.map((entry, index) => (
                         <Cell key={index} fill={entry.color} />
