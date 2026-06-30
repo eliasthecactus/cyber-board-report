@@ -236,6 +236,7 @@ export default function DashboardPage() {
           logo: info.hasLogo,
           primaryColor: info.hasPrimaryColor,
           ai: info.hasAi,
+          language: info.hasLanguage,
         },
       });
     } catch (error) {
@@ -596,6 +597,12 @@ export default function DashboardPage() {
               hint: "",
               available: Boolean(settings.openRouterApiKey || settings.redactionRules.length),
             },
+            {
+              key: "language",
+              label: t("backup.language"),
+              hint: t(settings.language === "de" ? "settings.languageGerman" : "settings.languageEnglish"),
+              available: true,
+            },
           ]}
           selection={exportSelection}
           onChange={setExportSelection}
@@ -633,6 +640,14 @@ export default function DashboardPage() {
               available: importState.info.hasPrimaryColor,
             },
             { key: "ai", label: t("backup.ai"), hint: "", available: importState.info.hasAi },
+            {
+              key: "language",
+              label: t("backup.language"),
+              hint: importState.info.language
+                ? t(importState.info.language === "de" ? "settings.languageGerman" : "settings.languageEnglish")
+                : "",
+              available: importState.info.hasLanguage,
+            },
           ]}
           selection={importState.selection}
           onChange={(selection) => setImportState({ ...importState, selection })}

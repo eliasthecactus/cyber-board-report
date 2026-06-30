@@ -47,6 +47,7 @@ export interface SnapshotSelection {
   logo: boolean;
   primaryColor: boolean;
   ai: boolean;
+  language: boolean;
 }
 
 /** What a snapshot file actually contains, for the import picker. */
@@ -56,6 +57,8 @@ export interface SnapshotInfo {
   hasLogo: boolean;
   hasPrimaryColor: boolean;
   hasAi: boolean;
+  hasLanguage: boolean;
+  language: string | null;
 }
 
 export const FULL_SELECTION: SnapshotSelection = {
@@ -64,6 +67,7 @@ export const FULL_SELECTION: SnapshotSelection = {
   logo: true,
   primaryColor: true,
   ai: true,
+  language: true,
 };
 
 function defaultProfile(): LocalProfile {
@@ -441,6 +445,11 @@ export function analyzeSnapshot(payload: unknown): SnapshotInfo {
     : null;
   const name = snapshotCandidate.profile?.displayName?.trim() || null;
 
+  const languageValue =
+    settings && (settings.language === "en" || settings.language === "de")
+      ? (settings.language as string)
+      : null;
+
   return {
     reportsCount: reports.length,
     name,
@@ -456,6 +465,8 @@ export function analyzeSnapshot(payload: unknown): SnapshotInfo {
           (typeof settings.openRouterModel === "string" && settings.openRouterModel.trim()) ||
           (Array.isArray(settings.redactionRules) && settings.redactionRules.length > 0)),
     ),
+    hasLanguage: languageValue !== null,
+    language: languageValue,
   };
 }
 
@@ -518,6 +529,9 @@ export async function importSnapshotPayload(
     const incoming = snapshotCandidate.settings as Partial<AppSettings>;
     const current = await getSettings();
     const patch: Partial<AppSettings> = {};
+    if (selection.language && (incoming.language === "en" || incoming.language === "de")) {
+      patch.language = incoming.language;
+    }
     if (selection.ai) {
       if (typeof incoming.openRouterApiKey === "string" && incoming.openRouterApiKey.trim()) {
         patch.openRouterApiKey = incoming.openRouterApiKey;
