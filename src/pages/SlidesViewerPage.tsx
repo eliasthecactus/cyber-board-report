@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -75,7 +76,7 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
     try {
       await exportReportToPdf(report, {
         onSlide: async (slideIndex) => {
-          setExportSlide(slideIndex);
+          flushSync(() => setExportSlide(slideIndex));
           await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
           return (exportRef.current?.firstElementChild as HTMLElement | null);
         },

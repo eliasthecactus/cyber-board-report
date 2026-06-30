@@ -32,9 +32,9 @@ export async function exportReportToPdf(
       const slideEl = await callbacks.onSlide(slideIndex);
       if (!slideEl) continue;
 
-      // Wait for render
+      // Wait for render; slide 0 is a cold mount so needs extra settle time
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-      await new Promise((r) => window.setTimeout(r, 250));
+      await new Promise((r) => window.setTimeout(r, slideIndex === 0 ? 600 : 250));
 
       const canvas = await html2canvas(slideEl, {
         backgroundColor: "#ffffff",
