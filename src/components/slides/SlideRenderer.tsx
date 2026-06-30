@@ -8,10 +8,9 @@ import TopRisksSlide from "./slides/TopRisksSlide";
 import ThreatLandscapeSlide from "./slides/ThreatLandscapeSlide";
 import KPISlide from "./slides/KPISlide";
 import IncidentsSlide from "./slides/IncidentsSlide";
-import ProgramStatusSlide from "./slides/ProgramStatusSlide";
-import BudgetSlide from "./slides/BudgetSlide";
-import ComplianceSlide from "./slides/ComplianceSlide";
-import SupplyChainSlide from "./slides/SupplyChainSlide";
+import ProcessSlide from "./slides/ProcessSlide";
+import HumanSlide from "./slides/HumanSlide";
+import TechnologySlide from "./slides/TechnologySlide";
 import InitiativesSlide from "./slides/InitiativesSlide";
 import OutlookSlide from "./slides/OutlookSlide";
 import DecisionsSlide from "./slides/DecisionsSlide";
@@ -30,10 +29,9 @@ export default function SlideRenderer({ report, slideIndex }: SlideRendererProps
     <ThreatLandscapeSlide key="threat" report={report} />,
     <KPISlide key="kpi" report={report} />,
     <IncidentsSlide key="incidents" report={report} />,
-    <ProgramStatusSlide key="program" report={report} />,
-    <BudgetSlide key="budget" report={report} />,
-    <ComplianceSlide key="compliance" report={report} />,
-    <SupplyChainSlide key="supply" report={report} />,
+    <ProcessSlide key="process" report={report} />,
+    <HumanSlide key="human" report={report} />,
+    <TechnologySlide key="technology" report={report} />,
     <InitiativesSlide key="initiatives" report={report} />,
     <OutlookSlide key="outlook" report={report} />,
     <DecisionsSlide key="decisions" report={report} />,

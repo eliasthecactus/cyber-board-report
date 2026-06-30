@@ -6,6 +6,9 @@ export type Trend = "improving" | "stable" | "worsening";
 export type TrendDirection = "up" | "down" | "stable";
 export type InitiativeStatus = "on-track" | "at-risk" | "delayed" | "not-started";
 
+/** Direction indicator for threat / domain items: increasing, steady, or decreasing. */
+export type DomainTrend = "more" | "stable" | "less";
+
 export interface Risk {
   id: string;
   name: string;
@@ -53,7 +56,27 @@ export interface Initiative {
   name: string;
   status: InitiativeStatus;
   progress: number; // 0-100
+  statusNote?: string; // free-text status update
   blockers?: string;
+}
+
+/** A single threat-landscape insight with a direction indicator. */
+export interface ThreatItem {
+  id: string;
+  text: string; // short name / headline
+  detail?: string; // optional supporting text
+  trend: DomainTrend;
+}
+
+/**
+ * An ongoing item in one of the three program domains (process / human /
+ * technology) — e.g. a new process, a training rollout, a new technology.
+ */
+export interface DomainItem {
+  id: string;
+  text: string; // short name / headline
+  detail?: string; // optional supporting text
+  trend: DomainTrend;
 }
 
 export interface Decision {
@@ -61,29 +84,6 @@ export interface Decision {
   title: string;
   rationale: string;
   impact: string;
-}
-
-export interface ProgramStatus {
-  status: "on-track" | "at-risk" | "at-critical-juncture";
-  achievements: string[];
-  challenges: string[];
-}
-
-export interface BudgetResources {
-  budget: string;
-  allocation: string;
-  constraints: string;
-}
-
-export interface ComplianceAudit {
-  status: "compliant" | "compliant-with-exceptions" | "non-compliant";
-  findings: string[];
-  gaps: string[];
-}
-
-export interface SupplyChainRisk {
-  risks: string[];
-  assessment: string;
 }
 
 export interface EmergingRisk {
@@ -98,16 +98,23 @@ export interface Report {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+  /** Report title shown on the title slide and in the footer. Empty = default. */
+  title: string;
+  /** Person presenting the report. Empty = falls back to createdBy. */
+  presenter: string;
+  /** Other people involved, shown on the title slide. */
+  participants: string[];
+  /** When false, the Top Risks slide hides the risk matrix and shows text only. */
+  showRiskMatrix: boolean;
   executiveSummary: string;
   executiveSummaryHighlight?: string; // Key callout/headline
   topRisks: Risk[];
-  threatLandscape: string;
+  threatLandscape: ThreatItem[];
   kpis: KPI[];
   incidents: Incident[];
-  programStatus: ProgramStatus;
-  budgetResources: BudgetResources;
-  complianceAudit: ComplianceAudit;
-  supplyChainRisk: SupplyChainRisk;
+  processItems: DomainItem[];
+  humanItems: DomainItem[];
+  technologyItems: DomainItem[];
   initiatives: Initiative[];
   outlook: string;
   emergingRisks?: EmergingRisk[]; // Key risks for outlook
@@ -148,10 +155,9 @@ export type ReportSection =
   | "threatLandscape"
   | "kpis"
   | "incidents"
-  | "programStatus"
-  | "budgetResources"
-  | "complianceAudit"
-  | "supplyChainRisk"
+  | "processItems"
+  | "humanItems"
+  | "technologyItems"
   | "initiatives"
   | "outlook"
   | "decisionsRequired";

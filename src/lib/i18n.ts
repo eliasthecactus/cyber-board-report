@@ -62,10 +62,31 @@ const en: Dict = {
   "dashboard.importedSettingsOnly": "Settings restored.",
   "dashboard.importFailed": "Import failed.",
 
+  // Backup export/import picker ---------------------------------------------
+  "backup.exportTitle": "Export Backup",
+  "backup.exportDesc": "Choose what to include in the backup file.",
+  "backup.importTitle": "Import Backup",
+  "backup.importDesc": "Choose what to restore from this file.",
+  "backup.export": "Export",
+  "backup.import": "Import",
+  "backup.reports": "Reports",
+  "backup.reportsCount": "{count} report(s)",
+  "backup.name": "Display name",
+  "backup.logo": "Company logo",
+  "backup.primaryColor": "Primary color",
+  "backup.ai": "AI settings (key, model, redaction)",
+  "backup.notAvailableExport": "Nothing stored",
+  "backup.notAvailableImport": "Not in this file",
+  "backup.nothingSelected": "Select at least one item.",
+
   // Report editor -----------------------------------------------------------
   "editor.boardReport": "{quarter} {year} Board Report",
   "editor.updated": "Updated {date}",
   "editor.preview": "Preview",
+  "editor.importSection": "Copy from {label}",
+  "editor.importSectionTitle": "Copy this section's content from {label}",
+  "editor.importSectionConfirm":
+    "Replace everything in “{section}” with the content from {label}? This overwrites the current section and cannot be undone.",
   "editor.reportSections": "Report sections",
   "editor.editing": "Editing",
   "editor.reportNotFound": "Report not found",
@@ -79,15 +100,15 @@ const en: Dict = {
   "editor.saveTitle.error": "The last save failed. Try again.",
 
   // Section labels ----------------------------------------------------------
+  "section.details": "Title Page",
   "section.executiveSummary": "Executive Summary",
   "section.topRisks": "Top Risks",
   "section.threatLandscape": "Threat Landscape",
   "section.kpis": "KPIs",
   "section.incidents": "Incidents",
-  "section.programStatus": "Program Status",
-  "section.budgetResources": "Budget & Resources",
-  "section.complianceAudit": "Compliance & Audit",
-  "section.supplyChainRisk": "Supply Chain Risk",
+  "section.processItems": "Process",
+  "section.humanItems": "Human",
+  "section.technologyItems": "Technology",
   "section.initiatives": "Initiatives",
   "section.outlook": "Outlook",
   "section.decisionsRequired": "Decisions Required",
@@ -334,6 +355,63 @@ const en: Dict = {
   "ed.kpi.oldData":
     "This historical data is older than typical recent quarters. It may compress your chart visualization.",
 
+  // Report title / shared
+  "report.defaultTitle": "Cyber Board Report",
+  "trend.more": "Increasing",
+  "trend.stable": "Stable",
+  "trend.less": "Decreasing",
+
+  // Editors: Title page / details
+  "ed.details.title": "Title Page",
+  "ed.details.desc": "The report title, who is presenting, and who else is involved.",
+  "ed.details.titleLabel": "Report Title",
+  "ed.details.titlePlaceholder": "Cyber Board Report",
+  "ed.details.titleHint": "Leave empty to use the default title.",
+  "ed.details.presenterLabel": "Presented by",
+  "ed.details.presenterPlaceholder": "Name of the presenter",
+  "ed.details.presenterHint": "Leave empty to use your display name.",
+  "ed.details.participantsLabel": "People Involved",
+  "ed.details.participantPlaceholder": "e.g. Jane Doe, CISO",
+  "ed.details.addParticipant": "Add Person",
+  "ed.details.participantsEmpty": "No people added yet.",
+  "ed.details.tip": "Tip: List the board members or stakeholders attending the presentation.",
+
+  // Editors: itemized lists (threat / process / human / technology)
+  "ed.item.detailPlaceholder": "Add a little more detail (optional)...",
+
+  // Editors: Threat Landscape (itemized)
+  "ed.threat.itemPlaceholder": "Threat or trend name...",
+  "ed.threat.add": "Add Threat",
+  "ed.threat.empty": "No threats added yet.",
+
+  // Editors: Process / Human / Technology
+  "ed.process.title": "Process",
+  "ed.process.desc": "Ongoing work on policies, procedures and governance.",
+  "ed.process.itemPlaceholder": "e.g. New incident response runbook...",
+  "ed.process.add": "Add Process Item",
+  "ed.process.empty": "No process items added yet.",
+  "ed.process.tip": "Tip: Highlight new or changed processes, policies and governance this quarter.",
+  "ed.human.title": "Human",
+  "ed.human.desc": "Ongoing work on people, awareness and culture.",
+  "ed.human.itemPlaceholder": "e.g. Phishing awareness training rolled out...",
+  "ed.human.add": "Add Human Item",
+  "ed.human.empty": "No human items added yet.",
+  "ed.human.tip": "Tip: Highlight training, hiring, awareness campaigns and culture changes.",
+  "ed.technology.title": "Technology",
+  "ed.technology.desc": "Ongoing work on tools, platforms and infrastructure.",
+  "ed.technology.itemPlaceholder": "e.g. EDR deployed to all endpoints...",
+  "ed.technology.add": "Add Technology Item",
+  "ed.technology.empty": "No technology items added yet.",
+  "ed.technology.tip": "Tip: Highlight new tools, platforms and infrastructure changes.",
+
+  // Editors: Top Risks matrix toggle
+  "ed.risks.showMatrixLabel": "Show risk matrix",
+  "ed.risks.showMatrixDesc": "When off, the Top Risks slide shows only the text list.",
+
+  // Editors: Initiatives status note
+  "ed.init.statusNoteLabel": "Status:",
+  "ed.init.statusNotePlaceholder": "Short status update on this initiative...",
+
   // Slides viewer chrome
   "slidesView.title": "{quarter} {year} - Slide Preview",
   "slidesView.present": "Present",
@@ -344,7 +422,13 @@ const en: Dict = {
 
   // Slides content
   "slide.title.subtitle": "Cyber Security Board Report",
-  "slide.title.preparedBy": "Prepared by: {name}",
+  "slide.title.preparedBy": "Presented by: {name}",
+  "slide.title.involved": "Involved",
+  "slide.process.title": "Process",
+  "slide.human.title": "Human",
+  "slide.technology.title": "Technology",
+  "slide.domain.none": "No items recorded",
+  "slide.initiatives.status": "Status: {text}",
   "slide.exec.keyTakeaway": "Key Takeaway",
   "slide.exec.noSummary": "No summary provided",
   "slide.threat.title": "Threat Landscape & External Threats",
@@ -477,10 +561,31 @@ const de: Dict = {
   "dashboard.importedSettingsOnly": "Einstellungen wiederhergestellt.",
   "dashboard.importFailed": "Import fehlgeschlagen.",
 
+  // Backup export/import picker
+  "backup.exportTitle": "Backup exportieren",
+  "backup.exportDesc": "Wählen Sie aus, was in die Backup-Datei aufgenommen wird.",
+  "backup.importTitle": "Backup importieren",
+  "backup.importDesc": "Wählen Sie aus, was aus dieser Datei wiederhergestellt wird.",
+  "backup.export": "Exportieren",
+  "backup.import": "Importieren",
+  "backup.reports": "Berichte",
+  "backup.reportsCount": "{count} Bericht(e)",
+  "backup.name": "Anzeigename",
+  "backup.logo": "Firmenlogo",
+  "backup.primaryColor": "Primärfarbe",
+  "backup.ai": "KI-Einstellungen (Schlüssel, Modell, Schwärzung)",
+  "backup.notAvailableExport": "Nichts gespeichert",
+  "backup.notAvailableImport": "Nicht in dieser Datei",
+  "backup.nothingSelected": "Wählen Sie mindestens ein Element aus.",
+
   // Report editor
   "editor.boardReport": "Vorstandsbericht {quarter} {year}",
   "editor.updated": "Aktualisiert {date}",
   "editor.preview": "Vorschau",
+  "editor.importSection": "Aus {label} übernehmen",
+  "editor.importSectionTitle": "Inhalt dieses Abschnitts aus {label} übernehmen",
+  "editor.importSectionConfirm":
+    "Alle Inhalte in „{section}“ durch die Daten aus {label} ersetzen? Dies überschreibt den aktuellen Abschnitt und kann nicht rückgängig gemacht werden.",
   "editor.reportSections": "Berichtsabschnitte",
   "editor.editing": "Bearbeitung",
   "editor.reportNotFound": "Bericht nicht gefunden",
@@ -494,15 +599,15 @@ const de: Dict = {
   "editor.saveTitle.error": "Der letzte Speichervorgang ist fehlgeschlagen. Bitte erneut versuchen.",
 
   // Section labels
+  "section.details": "Titelseite",
   "section.executiveSummary": "Management-Zusammenfassung",
   "section.topRisks": "Wesentliche Risiken",
   "section.threatLandscape": "Bedrohungslage",
   "section.kpis": "Kennzahlen (KPIs)",
   "section.incidents": "Sicherheitsvorfälle",
-  "section.programStatus": "Programmstatus",
-  "section.budgetResources": "Budget & Ressourcen",
-  "section.complianceAudit": "Compliance & Audit",
-  "section.supplyChainRisk": "Lieferkettenrisiko",
+  "section.processItems": "Prozesse",
+  "section.humanItems": "Mensch",
+  "section.technologyItems": "Technologie",
   "section.initiatives": "Initiativen",
   "section.outlook": "Ausblick",
   "section.decisionsRequired": "Erforderliche Entscheidungen",
@@ -768,6 +873,63 @@ const de: Dict = {
   "ed.kpi.oldData":
     "Diese historischen Daten sind älter als die üblichen jüngsten Quartale. Sie können Ihre Diagrammdarstellung stauchen.",
 
+  // Report title / shared
+  "report.defaultTitle": "Cyber Board Report",
+  "trend.more": "Zunehmend",
+  "trend.stable": "Stabil",
+  "trend.less": "Abnehmend",
+
+  // Editors: Title page / details
+  "ed.details.title": "Titelseite",
+  "ed.details.desc": "Der Berichtstitel, wer präsentiert und wer sonst beteiligt ist.",
+  "ed.details.titleLabel": "Berichtstitel",
+  "ed.details.titlePlaceholder": "Cyber Board Report",
+  "ed.details.titleHint": "Leer lassen, um den Standardtitel zu verwenden.",
+  "ed.details.presenterLabel": "Präsentiert von",
+  "ed.details.presenterPlaceholder": "Name der präsentierenden Person",
+  "ed.details.presenterHint": "Leer lassen, um Ihren Anzeigenamen zu verwenden.",
+  "ed.details.participantsLabel": "Beteiligte Personen",
+  "ed.details.participantPlaceholder": "z. B. Jane Doe, CISO",
+  "ed.details.addParticipant": "Person hinzufügen",
+  "ed.details.participantsEmpty": "Noch keine Personen hinzugefügt.",
+  "ed.details.tip": "Tipp: Nennen Sie die anwesenden Vorstandsmitglieder oder Stakeholder.",
+
+  // Editors: itemized lists (threat / process / human / technology)
+  "ed.item.detailPlaceholder": "Ein wenig mehr Detail hinzufügen (optional) …",
+
+  // Editors: Threat Landscape (itemized)
+  "ed.threat.itemPlaceholder": "Name der Bedrohung oder des Trends …",
+  "ed.threat.add": "Bedrohung hinzufügen",
+  "ed.threat.empty": "Noch keine Bedrohungen hinzugefügt.",
+
+  // Editors: Process / Human / Technology
+  "ed.process.title": "Prozesse",
+  "ed.process.desc": "Laufende Arbeiten an Richtlinien, Abläufen und Governance.",
+  "ed.process.itemPlaceholder": "z. B. Neues Runbook zur Vorfallreaktion …",
+  "ed.process.add": "Prozesspunkt hinzufügen",
+  "ed.process.empty": "Noch keine Prozesspunkte hinzugefügt.",
+  "ed.process.tip": "Tipp: Heben Sie neue oder geänderte Prozesse, Richtlinien und Governance hervor.",
+  "ed.human.title": "Mensch",
+  "ed.human.desc": "Laufende Arbeiten an Menschen, Awareness und Kultur.",
+  "ed.human.itemPlaceholder": "z. B. Phishing-Awareness-Schulung eingeführt …",
+  "ed.human.add": "Mensch-Punkt hinzufügen",
+  "ed.human.empty": "Noch keine Punkte hinzugefügt.",
+  "ed.human.tip": "Tipp: Heben Sie Schulungen, Einstellungen, Awareness-Kampagnen und Kulturwandel hervor.",
+  "ed.technology.title": "Technologie",
+  "ed.technology.desc": "Laufende Arbeiten an Tools, Plattformen und Infrastruktur.",
+  "ed.technology.itemPlaceholder": "z. B. EDR auf allen Endpunkten ausgerollt …",
+  "ed.technology.add": "Technologie-Punkt hinzufügen",
+  "ed.technology.empty": "Noch keine Punkte hinzugefügt.",
+  "ed.technology.tip": "Tipp: Heben Sie neue Tools, Plattformen und Infrastrukturänderungen hervor.",
+
+  // Editors: Top Risks matrix toggle
+  "ed.risks.showMatrixLabel": "Risikomatrix anzeigen",
+  "ed.risks.showMatrixDesc": "Wenn deaktiviert, zeigt die Folie nur die Textliste.",
+
+  // Editors: Initiatives status note
+  "ed.init.statusNoteLabel": "Status:",
+  "ed.init.statusNotePlaceholder": "Kurze Statusmeldung zu dieser Initiative …",
+
   // Slides viewer chrome
   "slidesView.title": "{quarter} {year} – Folienvorschau",
   "slidesView.present": "Präsentieren",
@@ -778,7 +940,13 @@ const de: Dict = {
 
   // Slides content
   "slide.title.subtitle": "Cyber-Security-Vorstandsbericht",
-  "slide.title.preparedBy": "Erstellt von: {name}",
+  "slide.title.preparedBy": "Präsentiert von: {name}",
+  "slide.title.involved": "Beteiligt",
+  "slide.process.title": "Prozesse",
+  "slide.human.title": "Mensch",
+  "slide.technology.title": "Technologie",
+  "slide.domain.none": "Keine Einträge erfasst",
+  "slide.initiatives.status": "Status: {text}",
   "slide.exec.keyTakeaway": "Kernaussage",
   "slide.exec.noSummary": "Keine Zusammenfassung angegeben",
   "slide.threat.title": "Bedrohungslage & externe Bedrohungen",

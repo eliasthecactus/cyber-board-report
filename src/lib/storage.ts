@@ -40,6 +40,32 @@ export interface ImportResult {
   settingsImported: boolean;
 }
 
+/** Which parts of a snapshot to export or import. */
+export interface SnapshotSelection {
+  reports: boolean;
+  name: boolean;
+  logo: boolean;
+  primaryColor: boolean;
+  ai: boolean;
+}
+
+/** What a snapshot file actually contains, for the import picker. */
+export interface SnapshotInfo {
+  reportsCount: number;
+  name: string | null;
+  hasLogo: boolean;
+  hasPrimaryColor: boolean;
+  hasAi: boolean;
+}
+
+export const FULL_SELECTION: SnapshotSelection = {
+  reports: true,
+  name: true,
+  logo: true,
+  primaryColor: true,
+  ai: true,
+};
+
 function defaultProfile(): LocalProfile {
   return {
     displayName: "Local User",
@@ -373,17 +399,70 @@ export async function clearLocalData(): Promise<void> {
   window.localStorage.removeItem(SETTINGS_FALLBACK_KEY);
 }
 
-export async function exportSnapshot(): Promise<AppSnapshot> {
+export async function exportSnapshot(
+  selection: SnapshotSelection = FULL_SELECTION,
+): Promise<AppSnapshot> {
+  const fullProfile = await getProfile();
+  const fullSettings = await getSettings();
+
   return {
     version: SNAPSHOT_VERSION,
     exportedAt: new Date().toISOString(),
-    profile: await getProfile(),
-    reports: await listReports(),
-    settings: await getSettings(),
+    profile: {
+      displayName: selection.name ? fullProfile.displayName : "",
+      updatedAt: fullProfile.updatedAt,
+    },
+    reports: selection.reports ? await listReports() : [],
+    settings: {
+      language: fullSettings.language,
+      openRouterApiKey: selection.ai ? fullSettings.openRouterApiKey : "",
+      openRouterModel: selection.ai ? fullSettings.openRouterModel : "",
+      redactionRules: selection.ai ? fullSettings.redactionRules : [],
+      logo: selection.logo ? fullSettings.logo : "",
+      primaryColor: selection.primaryColor ? fullSettings.primaryColor : "",
+      updatedAt: fullSettings.updatedAt,
+    },
   };
 }
 
-export async function importSnapshotPayload(payload: unknown): Promise<ImportResult> {
+/** Inspect a parsed snapshot/report file and report what it can restore. */
+export function analyzeSnapshot(payload: unknown): SnapshotInfo {
+  const candidate = isRecord(payload)
+    ? (payload as Partial<AppSnapshot> | Partial<Report>)
+    : {};
+  const snapshotCandidate = candidate as Partial<AppSnapshot>;
+  const reports = Array.isArray(snapshotCandidate.reports)
+    ? (snapshotCandidate.reports as Partial<Report>[])
+    : isReportLike(candidate)
+      ? [candidate as Partial<Report>]
+      : [];
+  const settings = isRecord(snapshotCandidate.settings)
+    ? (snapshotCandidate.settings as Partial<AppSettings>)
+    : null;
+  const name = snapshotCandidate.profile?.displayName?.trim() || null;
+
+  return {
+    reportsCount: reports.length,
+    name,
+    hasLogo: Boolean(settings && typeof settings.logo === "string" && settings.logo),
+    hasPrimaryColor: Boolean(
+      settings &&
+        typeof settings.primaryColor === "string" &&
+        /^#[0-9a-fA-F]{6}$/.test(settings.primaryColor),
+    ),
+    hasAi: Boolean(
+      settings &&
+        ((typeof settings.openRouterApiKey === "string" && settings.openRouterApiKey.trim()) ||
+          (typeof settings.openRouterModel === "string" && settings.openRouterModel.trim()) ||
+          (Array.isArray(settings.redactionRules) && settings.redactionRules.length > 0)),
+    ),
+  };
+}
+
+export async function importSnapshotPayload(
+  payload: unknown,
+  selection: SnapshotSelection = FULL_SELECTION,
+): Promise<ImportResult> {
   const existing = await listReports();
   const existingIds = new Set(existing.map((report) => report.id));
 
@@ -406,57 +485,69 @@ export async function importSnapshotPayload(payload: unknown): Promise<ImportRes
   }
 
   let imported = 0;
-  for (const reportInput of reports) {
-    const report = normalizeReport(reportInput);
-    const id = existingIds.has(report.id) ? createId() : report.id;
-    existingIds.add(id);
+  if (selection.reports) {
+    for (const reportInput of reports) {
+      const report = normalizeReport(reportInput);
+      const id = existingIds.has(report.id) ? createId() : report.id;
+      existingIds.add(id);
 
-    await saveReport({
-      ...report,
-      id,
-      updatedAt: new Date().toISOString(),
-    });
-    imported += 1;
+      await saveReport({
+        ...report,
+        id,
+        updatedAt: new Date().toISOString(),
+      });
+      imported += 1;
+    }
   }
 
   const incomingProfile = snapshotCandidate.profile;
-  if (incomingProfile?.displayName) {
+  let profileImported = false;
+  if (selection.name && incomingProfile?.displayName) {
     await saveProfile({
       displayName: incomingProfile.displayName,
       updatedAt: new Date().toISOString(),
     });
+    profileImported = true;
   }
 
-  // Restore settings if the backup carries them. Fields that are absent or blank
-  // (e.g. an API key or name the user deliberately stripped before sharing) are
-  // left untouched rather than wiping the current value.
+  // Restore only the selected settings fields. Fields that are absent or blank
+  // (e.g. an API key the user deliberately stripped before sharing) are left
+  // untouched rather than wiping the current value.
   let settingsImported = false;
   if (hasSettings) {
     const incoming = snapshotCandidate.settings as Partial<AppSettings>;
     const current = await getSettings();
     const patch: Partial<AppSettings> = {};
-    if (incoming.language === "de" || incoming.language === "en") {
-      patch.language = incoming.language;
+    if (selection.ai) {
+      if (typeof incoming.openRouterApiKey === "string" && incoming.openRouterApiKey.trim()) {
+        patch.openRouterApiKey = incoming.openRouterApiKey;
+      }
+      if (typeof incoming.openRouterModel === "string" && incoming.openRouterModel.trim()) {
+        patch.openRouterModel = incoming.openRouterModel;
+      }
+      if (Array.isArray(incoming.redactionRules)) {
+        patch.redactionRules = incoming.redactionRules;
+      }
     }
-    if (typeof incoming.openRouterApiKey === "string" && incoming.openRouterApiKey.trim()) {
-      patch.openRouterApiKey = incoming.openRouterApiKey;
-    }
-    if (typeof incoming.openRouterModel === "string" && incoming.openRouterModel.trim()) {
-      patch.openRouterModel = incoming.openRouterModel;
-    }
-    if (Array.isArray(incoming.redactionRules)) {
-      patch.redactionRules = incoming.redactionRules;
-    }
-    if (typeof incoming.logo === "string" && incoming.logo) {
+    if (selection.logo && typeof incoming.logo === "string" && incoming.logo) {
       patch.logo = incoming.logo;
     }
-    await saveSettings(normalizeSettings({ ...current, ...patch }));
-    settingsImported = true;
+    if (
+      selection.primaryColor &&
+      typeof incoming.primaryColor === "string" &&
+      /^#[0-9a-fA-F]{6}$/.test(incoming.primaryColor)
+    ) {
+      patch.primaryColor = incoming.primaryColor;
+    }
+    if (Object.keys(patch).length > 0) {
+      await saveSettings(normalizeSettings({ ...current, ...patch }));
+      settingsImported = true;
+    }
   }
 
   return {
     reportsImported: imported,
-    profileImported: Boolean(incomingProfile?.displayName),
+    profileImported,
     settingsImported,
   };
 }

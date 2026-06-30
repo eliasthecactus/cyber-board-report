@@ -97,6 +97,19 @@ export default function InitiativesEditor({
 
               <div>
                 <label>
+                  <span className="text-sm font-medium text-slate-700 font-semibold">{t("ed.init.statusNoteLabel")}</span>
+                </label>
+                <AiTextarea
+                  aiLabel={t("ed.init.statusNoteLabel")}
+                  placeholder={t("ed.init.statusNotePlaceholder")}
+                  value={initiative.statusNote || ""}
+                  onValueChange={(value) => updateInitiative(initiative.id, { statusNote: value })}
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <label>
                   <span className="text-sm font-medium text-slate-700 font-semibold">{t("ed.init.blockersOptional")}</span>
                 </label>
                 <AiTextarea

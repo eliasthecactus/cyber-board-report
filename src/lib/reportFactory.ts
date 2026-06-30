@@ -1,6 +1,6 @@
-import type { Report } from "@/types";
+import type { DomainItem, DomainTrend, Initiative, Report, ThreatItem } from "@/types";
 
-export const REPORT_SCHEMA_VERSION = 1;
+export const REPORT_SCHEMA_VERSION = 2;
 
 export function createId(prefix = "report"): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -32,31 +32,19 @@ export function createEmptyReport({
     createdAt: now,
     updatedAt: now,
     createdBy,
+    title: "",
+    presenter: "",
+    participants: [],
+    showRiskMatrix: true,
     executiveSummary: "",
     executiveSummaryHighlight: "",
     topRisks: [],
-    threatLandscape: "",
+    threatLandscape: [],
     kpis: [],
     incidents: [],
-    programStatus: {
-      status: "on-track",
-      achievements: [],
-      challenges: [],
-    },
-    budgetResources: {
-      budget: "",
-      allocation: "",
-      constraints: "",
-    },
-    complianceAudit: {
-      status: "compliant",
-      findings: [],
-      gaps: [],
-    },
-    supplyChainRisk: {
-      risks: [],
-      assessment: "",
-    },
+    processItems: [],
+    humanItems: [],
+    technologyItems: [],
     initiatives: [],
     outlook: "",
     emergingRisks: [],
@@ -73,6 +61,72 @@ export function cloneReport(report: Report, createdBy: string): Report {
     createdAt: now,
     updatedAt: now,
     createdBy,
+  });
+}
+
+const TRENDS: DomainTrend[] = ["more", "stable", "less"];
+
+function asTrend(value: unknown): DomainTrend {
+  return TRENDS.includes(value as DomainTrend) ? (value as DomainTrend) : "stable";
+}
+
+/**
+ * Accepts the new ThreatItem[] shape, a legacy plain-text string (split into
+ * sentences), or an array of strings, and returns normalized ThreatItem[].
+ */
+function normalizeThreatLandscape(value: unknown): ThreatItem[] {
+  if (typeof value === "string") {
+    return value
+      .split(/(?<=\.)\s+|\n+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((text) => ({ id: createId("threat"), text, detail: "", trend: "stable" as DomainTrend }));
+  }
+  return normalizeListItems(value, "threat");
+}
+
+// ThreatItem and DomainItem share the same shape, so one normalizer serves both.
+function normalizeListItems(value: unknown, idPrefix: string): DomainItem[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((item): DomainItem | null => {
+      if (typeof item === "string") {
+        return { id: createId(idPrefix), text: item, detail: "", trend: "stable" };
+      }
+      if (item && typeof item === "object") {
+        const record = item as Partial<DomainItem>;
+        return {
+          id: record.id || createId(idPrefix),
+          text: typeof record.text === "string" ? record.text : "",
+          detail: typeof record.detail === "string" ? record.detail : "",
+          trend: asTrend(record.trend),
+        };
+      }
+      return null;
+    })
+    .filter((item): item is DomainItem => Boolean(item) && item!.text.length > 0);
+}
+
+function normalizeDomainItems(value: unknown): DomainItem[] {
+  return normalizeListItems(value, "item");
+}
+
+function normalizeInitiatives(value: unknown): Initiative[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.map((item) => {
+    const record = (item || {}) as Partial<Initiative>;
+    return {
+      id: record.id || createId("initiative"),
+      name: typeof record.name === "string" ? record.name : "",
+      status: record.status || "on-track",
+      progress: Number.isFinite(record.progress) ? Number(record.progress) : 0,
+      statusNote: typeof record.statusNote === "string" ? record.statusNote : "",
+      blockers: typeof record.blockers === "string" ? record.blockers : "",
+    };
   });
 }
 
@@ -94,44 +148,22 @@ export function normalizeReport(input: Partial<Report>): Report {
     createdAt: input.createdAt || fallback.createdAt,
     updatedAt: input.updatedAt || fallback.updatedAt,
     createdBy: input.createdBy || fallback.createdBy,
+    title: typeof input.title === "string" ? input.title : "",
+    presenter: typeof input.presenter === "string" ? input.presenter : "",
+    participants: Array.isArray(input.participants)
+      ? input.participants.filter((name): name is string => typeof name === "string")
+      : [],
+    showRiskMatrix: input.showRiskMatrix !== false,
     executiveSummary: input.executiveSummary || "",
     executiveSummaryHighlight: input.executiveSummaryHighlight || "",
     topRisks: Array.isArray(input.topRisks) ? input.topRisks : [],
-    threatLandscape: input.threatLandscape || "",
+    threatLandscape: normalizeThreatLandscape(input.threatLandscape),
     kpis: Array.isArray(input.kpis) ? input.kpis : [],
     incidents: Array.isArray(input.incidents) ? input.incidents : [],
-    programStatus: {
-      ...fallback.programStatus,
-      ...(input.programStatus || {}),
-      achievements: Array.isArray(input.programStatus?.achievements)
-        ? input.programStatus.achievements
-        : [],
-      challenges: Array.isArray(input.programStatus?.challenges)
-        ? input.programStatus.challenges
-        : [],
-    },
-    budgetResources: {
-      ...fallback.budgetResources,
-      ...(input.budgetResources || {}),
-    },
-    complianceAudit: {
-      ...fallback.complianceAudit,
-      ...(input.complianceAudit || {}),
-      findings: Array.isArray(input.complianceAudit?.findings)
-        ? input.complianceAudit.findings
-        : [],
-      gaps: Array.isArray(input.complianceAudit?.gaps)
-        ? input.complianceAudit.gaps
-        : [],
-    },
-    supplyChainRisk: {
-      ...fallback.supplyChainRisk,
-      ...(input.supplyChainRisk || {}),
-      risks: Array.isArray(input.supplyChainRisk?.risks)
-        ? input.supplyChainRisk.risks
-        : [],
-    },
-    initiatives: Array.isArray(input.initiatives) ? input.initiatives : [],
+    processItems: normalizeDomainItems(input.processItems),
+    humanItems: normalizeDomainItems(input.humanItems),
+    technologyItems: normalizeDomainItems(input.technologyItems),
+    initiatives: normalizeInitiatives(input.initiatives),
     outlook: input.outlook || "",
     emergingRisks: Array.isArray(input.emergingRisks) ? input.emergingRisks : [],
     decisionsRequired: Array.isArray(input.decisionsRequired)

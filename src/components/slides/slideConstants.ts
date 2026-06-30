@@ -6,7 +6,7 @@ import { DEFAULT_PRIMARY_COLOR } from "@/lib/settingsDefaults";
 export const SLIDE_WIDTH = 1280;
 export const SLIDE_HEIGHT = 720;
 
-export const TOTAL_SLIDES = 13;
+export const TOTAL_SLIDES = 12;
 
 /** Returns the user-chosen primary color from settings. */
 export function usePrimaryColor(): string {

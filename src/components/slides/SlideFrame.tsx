@@ -40,7 +40,7 @@ function Footer({ report, accent }: { report: Report; accent: string }) {
       <div className="flex items-center gap-3">
         <div className="h-[3px] w-8 rounded-full" style={{ backgroundColor: accent, opacity: 0.4 }} />
         <span className="font-medium">
-          {report.quarter} {report.year} &middot; {t("slide.title.subtitle")}
+          {report.quarter} {report.year} &middot; {report.title.trim() || t("report.defaultTitle")}
         </span>
       </div>
       <span className="tabular-nums font-medium">

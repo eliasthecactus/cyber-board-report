@@ -78,10 +78,14 @@ export default function TopRisksSlide({ report }: TopRisksSlideProps) {
             ))}
           </div>
 
-          <div className="grid min-h-0 flex-1 grid-cols-[1.4fr_1fr] gap-5">
+          <div
+            className={`grid min-h-0 flex-1 gap-5 ${
+              report.showRiskMatrix ? "grid-cols-[1.4fr_1fr]" : "grid-cols-1"
+            }`}
+          >
             {/* Risk list */}
-            <div className="flex flex-col gap-2">
-              <h3 className="m-0 text-[13px] font-bold uppercase tracking-wider text-slate-400">
+            <div className={report.showRiskMatrix ? "flex flex-col gap-2" : "grid grid-cols-2 gap-2 content-start"}>
+              <h3 className={`m-0 text-[13px] font-bold uppercase tracking-wider text-slate-400 ${report.showRiskMatrix ? "" : "col-span-2"}`}>
                 {t("slide.risks.highPriority")}
               </h3>
               {shownRisks.map((risk) => {
@@ -111,6 +115,7 @@ export default function TopRisksSlide({ report }: TopRisksSlideProps) {
             </div>
 
             {/* Risk matrix */}
+            {report.showRiskMatrix && (
             <div className="flex min-w-0 flex-col">
               <h3 className="m-0 mb-2 text-[13px] font-bold uppercase tracking-wider text-slate-400">
                 {t("slide.risks.distribution")}
@@ -162,6 +167,7 @@ export default function TopRisksSlide({ report }: TopRisksSlideProps) {
                 </div>
               </div>
             </div>
+            )}
           </div>
         </div>
       )}

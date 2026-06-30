@@ -4,37 +4,87 @@ import {
   AlertTriangle,
   ArrowLeft,
   BarChart3,
-  CheckCircle,
-  DollarSign,
+  Cpu,
   Eye,
   FileText,
   Globe,
   Handshake,
-  Link2,
+  History,
   Loader2,
   Pen,
   Play,
   Save,
-  ScrollText,
+  Settings2,
   Target,
+  Users,
+  Workflow,
 } from "lucide-react";
-import type { Report, ReportSection } from "@/types";
-import BudgetEditor from "@/components/editors/BudgetEditor";
-import ComplianceEditor from "@/components/editors/ComplianceEditor";
+import type { DomainItem, Report, ReportSection, ThreatItem } from "@/types";
 import DecisionsEditor from "@/components/editors/DecisionsEditor";
+import DetailsEditor from "@/components/editors/DetailsEditor";
 import ExecutiveSummaryEditor from "@/components/editors/ExecutiveSummaryEditor";
 import IncidentsEditor from "@/components/editors/IncidentsEditor";
 import InitiativesEditor from "@/components/editors/InitiativesEditor";
+import ItemListEditor from "@/components/editors/ItemListEditor";
 import KPIEditor from "@/components/editors/KPIEditor";
 import OutlookEditor from "@/components/editors/OutlookEditor";
-import ProgramStatusEditor from "@/components/editors/ProgramStatusEditor";
-import SupplyChainEditor from "@/components/editors/SupplyChainEditor";
-import ThreatLandscapeEditor from "@/components/editors/ThreatLandscapeEditor";
 import TopRisksEditor from "@/components/editors/TopRisksEditor";
 import { navigateTo } from "@/lib/navigation";
 import { getReport, saveReport, listReports } from "@/lib/storage";
 import { useT } from "@/lib/i18n";
+import { createId } from "@/lib/reportFactory";
 import { ReportContextProvider, serializeReportForAi } from "@/lib/reportContext";
+
+function quarterNumber(quarter: string): number {
+  return Number(quarter.replace(/\D/g, "")) || 0;
+}
+
+/** Whether report `a` covers an earlier period than `current`. */
+function isEarlier(a: Report, current: Report): boolean {
+  if (a.year !== current.year) return a.year < current.year;
+  return quarterNumber(a.quarter) < quarterNumber(current.quarter);
+}
+
+/** Clone an array of items giving each a fresh id, so copied rows stay unique. */
+function withFreshIds<T extends { id: string }>(items: T[], prefix: string): T[] {
+  return items.map((item) => ({ ...structuredClone(item), id: createId(prefix) }));
+}
+
+/** Build the patch that copies one section's content from a source report. */
+function sectionPatch(section: EditorSection, source: Report): Partial<Report> {
+  switch (section) {
+    case "details":
+      return {
+        title: source.title,
+        presenter: source.presenter,
+        participants: [...source.participants],
+      };
+    case "executiveSummary":
+      return { executiveSummary: source.executiveSummary };
+    case "topRisks":
+      return { topRisks: withFreshIds(source.topRisks, "risk") };
+    case "threatLandscape":
+      return { threatLandscape: withFreshIds(source.threatLandscape, "threat") };
+    case "kpis":
+      return { kpis: withFreshIds(source.kpis, "kpi") };
+    case "incidents":
+      return { incidents: withFreshIds(source.incidents, "incident") };
+    case "processItems":
+      return { processItems: withFreshIds(source.processItems, "process") };
+    case "humanItems":
+      return { humanItems: withFreshIds(source.humanItems, "human") };
+    case "technologyItems":
+      return { technologyItems: withFreshIds(source.technologyItems, "technology") };
+    case "initiatives":
+      return { initiatives: withFreshIds(source.initiatives, "initiative") };
+    case "outlook":
+      return { outlook: source.outlook };
+    case "decisionsRequired":
+      return { decisionsRequired: withFreshIds(source.decisionsRequired, "decision") };
+    default:
+      return {};
+  }
+}
 
 interface ReportEditorPageProps {
   reportId: string;
@@ -42,16 +92,18 @@ interface ReportEditorPageProps {
 
 type SaveState = "saved" | "saving" | "unsaved" | "error";
 
-const sections: { id: ReportSection; labelKey: string; Icon: typeof FileText }[] = [
+type EditorSection = "details" | ReportSection;
+
+const sections: { id: EditorSection; labelKey: string; Icon: typeof FileText }[] = [
+  { id: "details", labelKey: "section.details", Icon: Settings2 },
   { id: "executiveSummary", labelKey: "section.executiveSummary", Icon: FileText },
   { id: "topRisks", labelKey: "section.topRisks", Icon: AlertTriangle },
   { id: "threatLandscape", labelKey: "section.threatLandscape", Icon: Globe },
   { id: "kpis", labelKey: "section.kpis", Icon: BarChart3 },
   { id: "incidents", labelKey: "section.incidents", Icon: AlertCircle },
-  { id: "programStatus", labelKey: "section.programStatus", Icon: CheckCircle },
-  { id: "budgetResources", labelKey: "section.budgetResources", Icon: DollarSign },
-  { id: "complianceAudit", labelKey: "section.complianceAudit", Icon: ScrollText },
-  { id: "supplyChainRisk", labelKey: "section.supplyChainRisk", Icon: Link2 },
+  { id: "processItems", labelKey: "section.processItems", Icon: Workflow },
+  { id: "humanItems", labelKey: "section.humanItems", Icon: Users },
+  { id: "technologyItems", labelKey: "section.technologyItems", Icon: Cpu },
   { id: "initiatives", labelKey: "section.initiatives", Icon: Target },
   { id: "outlook", labelKey: "section.outlook", Icon: Eye },
   { id: "decisionsRequired", labelKey: "section.decisionsRequired", Icon: Handshake },
@@ -60,7 +112,8 @@ const sections: { id: ReportSection; labelKey: string; Icon: typeof FileText }[]
 export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
   const t = useT();
   const [report, setReport] = useState<Report | null>(null);
-  const [activeSection, setActiveSection] = useState<ReportSection>("executiveSummary");
+  const [priorReport, setPriorReport] = useState<Report | null>(null);
+  const [activeSection, setActiveSection] = useState<EditorSection>("details");
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const lastSavedSnapshot = useRef("");
@@ -82,6 +135,19 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
       lastSavedSnapshot.current = storedReport ? JSON.stringify(storedReport) : "";
       setSaveState("saved");
       setLoading(false);
+
+      if (storedReport) {
+        const all = await listReports();
+        if (cancelled) return;
+        const prior = all
+          .filter((r) => r.id !== storedReport.id && isEarlier(r, storedReport))
+          .sort((a, b) =>
+            a.year !== b.year
+              ? b.year - a.year
+              : quarterNumber(b.quarter) - quarterNumber(a.quarter),
+          )[0];
+        setPriorReport(prior || null);
+      }
     };
 
     void load();
@@ -172,6 +238,22 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
         updatedAt: new Date().toISOString(),
       };
     });
+  };
+
+  const handlePatch = (patch: Partial<Report>) => {
+    setReport((current) =>
+      current ? { ...current, ...patch, updatedAt: new Date().toISOString() } : current,
+    );
+  };
+
+  const handleImportSection = () => {
+    if (!priorReport || !activeSectionMeta) return;
+    const label = `${priorReport.quarter} ${priorReport.year}`;
+    const sectionName = t(activeSectionMeta.labelKey);
+    if (!window.confirm(t("editor.importSectionConfirm", { section: sectionName, label }))) {
+      return;
+    }
+    handlePatch(sectionPatch(activeSection, priorReport));
   };
 
   if (loading) {
@@ -293,9 +375,34 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
                 {activeSectionMeta ? t(activeSectionMeta.labelKey) : ""}
               </h2>
             </div>
+            {priorReport && (
+              <button
+                className="cbr-btn cbr-btn-outline cbr-btn-sm shrink-0"
+                onClick={handleImportSection}
+                title={t("editor.importSectionTitle", {
+                  label: `${priorReport.quarter} ${priorReport.year}`,
+                })}
+              >
+                <History size={14} />
+                {t("editor.importSection", {
+                  label: `${priorReport.quarter} ${priorReport.year}`,
+                })}
+              </button>
+            )}
           </div>
 
           <ReportContextProvider getContext={() => serializeReportForAi(report)}>
+          {activeSection === "details" && (
+            <DetailsEditor
+              data={{
+                title: report.title,
+                presenter: report.presenter,
+                participants: report.participants,
+              }}
+              presenterFallback={report.createdBy}
+              onUpdate={(patch) => handlePatch(patch)}
+            />
+          )}
           {activeSection === "executiveSummary" && (
             <ExecutiveSummaryEditor
               data={report.executiveSummary}
@@ -306,12 +413,23 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
             <TopRisksEditor
               data={report.topRisks}
               onUpdate={(data) => handleSectionUpdate("topRisks", data)}
+              showRiskMatrix={report.showRiskMatrix}
+              onShowRiskMatrixChange={(value) => handlePatch({ showRiskMatrix: value })}
             />
           )}
           {activeSection === "threatLandscape" && (
-            <ThreatLandscapeEditor
+            <ItemListEditor<ThreatItem>
               data={report.threatLandscape}
               onUpdate={(data) => handleSectionUpdate("threatLandscape", data)}
+              idPrefix="threat"
+              titleKey="ed.threat.title"
+              descKey="ed.threat.desc"
+              placeholderKey="ed.threat.itemPlaceholder"
+              detailPlaceholderKey="ed.item.detailPlaceholder"
+              addKey="ed.threat.add"
+              emptyKey="ed.threat.empty"
+              tipKey="ed.threat.tip"
+              aiLabelKey="ed.threat.title"
             />
           )}
           {activeSection === "kpis" && (
@@ -328,28 +446,49 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
               onUpdate={(data) => handleSectionUpdate("incidents", data)}
             />
           )}
-          {activeSection === "programStatus" && (
-            <ProgramStatusEditor
-              data={report.programStatus}
-              onUpdate={(data) => handleSectionUpdate("programStatus", data)}
+          {activeSection === "processItems" && (
+            <ItemListEditor<DomainItem>
+              data={report.processItems}
+              onUpdate={(data) => handleSectionUpdate("processItems", data)}
+              idPrefix="process"
+              titleKey="ed.process.title"
+              descKey="ed.process.desc"
+              placeholderKey="ed.process.itemPlaceholder"
+              detailPlaceholderKey="ed.item.detailPlaceholder"
+              addKey="ed.process.add"
+              emptyKey="ed.process.empty"
+              tipKey="ed.process.tip"
+              aiLabelKey="ed.process.title"
             />
           )}
-          {activeSection === "budgetResources" && (
-            <BudgetEditor
-              data={report.budgetResources}
-              onUpdate={(data) => handleSectionUpdate("budgetResources", data)}
+          {activeSection === "humanItems" && (
+            <ItemListEditor<DomainItem>
+              data={report.humanItems}
+              onUpdate={(data) => handleSectionUpdate("humanItems", data)}
+              idPrefix="human"
+              titleKey="ed.human.title"
+              descKey="ed.human.desc"
+              placeholderKey="ed.human.itemPlaceholder"
+              detailPlaceholderKey="ed.item.detailPlaceholder"
+              addKey="ed.human.add"
+              emptyKey="ed.human.empty"
+              tipKey="ed.human.tip"
+              aiLabelKey="ed.human.title"
             />
           )}
-          {activeSection === "complianceAudit" && (
-            <ComplianceEditor
-              data={report.complianceAudit}
-              onUpdate={(data) => handleSectionUpdate("complianceAudit", data)}
-            />
-          )}
-          {activeSection === "supplyChainRisk" && (
-            <SupplyChainEditor
-              data={report.supplyChainRisk}
-              onUpdate={(data) => handleSectionUpdate("supplyChainRisk", data)}
+          {activeSection === "technologyItems" && (
+            <ItemListEditor<DomainItem>
+              data={report.technologyItems}
+              onUpdate={(data) => handleSectionUpdate("technologyItems", data)}
+              idPrefix="technology"
+              titleKey="ed.technology.title"
+              descKey="ed.technology.desc"
+              placeholderKey="ed.technology.itemPlaceholder"
+              detailPlaceholderKey="ed.item.detailPlaceholder"
+              addKey="ed.technology.add"
+              emptyKey="ed.technology.empty"
+              tipKey="ed.technology.tip"
+              aiLabelKey="ed.technology.title"
             />
           )}
           {activeSection === "initiatives" && (

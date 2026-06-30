@@ -25,13 +25,17 @@ import { SLIDE_WIDTH, SLIDE_HEIGHT } from "@/components/slides/slideConstants";
 import { useT } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
 import {
+  analyzeSnapshot,
   deleteReport,
   exportSnapshot,
+  FULL_SELECTION,
   getProfile,
   importSnapshotPayload,
   listReports,
   saveReport,
   type LocalProfile,
+  type SnapshotInfo,
+  type SnapshotSelection,
 } from "@/lib/storage";
 
 interface QuarterFormState {
@@ -48,7 +52,7 @@ type DialogMode = "create" | "duplicate" | "changeQuarter";
 
 export default function DashboardPage() {
   const t = useT();
-  const { reload: reloadSettings } = useSettings();
+  const { settings, reload: reloadSettings } = useSettings();
   const [reports, setReports] = useState<Report[]>([]);
   const [profile, setProfile] = useState<LocalProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +65,13 @@ export default function DashboardPage() {
   const [exportingReportId, setExportingReportId] = useState<string | null>(null);
   const [exportSlide, setExportSlide] = useState<number | null>(null);
   const [exportReport, setExportReport] = useState<Report | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportSelection, setExportSelection] = useState<SnapshotSelection>(FULL_SELECTION);
+  const [importState, setImportState] = useState<{
+    payload: unknown;
+    info: SnapshotInfo;
+    selection: SnapshotSelection;
+  } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -157,9 +168,15 @@ export default function DashboardPage() {
     setBusyReportId(null);
   };
 
-  const handleExportAll = async () => {
-    const snapshot = await exportSnapshot();
+  const openExportDialog = () => {
+    setExportSelection(FULL_SELECTION);
+    setExportOpen(true);
+  };
+
+  const handleExportConfirm = async () => {
+    const snapshot = await exportSnapshot(exportSelection);
     downloadJson(backupFilename(), snapshot);
+    setExportOpen(false);
   };
 
   const handleExportReport = (report: Report) => {
@@ -197,30 +214,60 @@ export default function DashboardPage() {
 
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) {
       return;
     }
 
     try {
       const payload = await readJsonFile(file);
-      const result = await importSnapshotPayload(payload);
-      if (result.settingsImported) {
+      const info = analyzeSnapshot(payload);
+      if (info.reportsCount === 0 && !info.name && !info.hasLogo && !info.hasPrimaryColor && !info.hasAi) {
+        setMessage(t("dashboard.importFailed"));
+        return;
+      }
+      // Pre-select everything the file actually contains.
+      setImportState({
+        payload,
+        info,
+        selection: {
+          reports: info.reportsCount > 0,
+          name: Boolean(info.name),
+          logo: info.hasLogo,
+          primaryColor: info.hasPrimaryColor,
+          ai: info.hasAi,
+        },
+      });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t("dashboard.importFailed"));
+    }
+  };
+
+  const handleImportConfirm = async () => {
+    if (!importState) return;
+    try {
+      const result = await importSnapshotPayload(importState.payload, importState.selection);
+      if (result.settingsImported || result.profileImported) {
         await reloadSettings();
       }
-      if (result.reportsImported === 0 && result.settingsImported) {
+      if (result.reportsImported === 0 && (result.settingsImported || result.profileImported)) {
         setMessage(t("dashboard.importedSettingsOnly"));
       } else {
         const base =
           result.reportsImported === 1
             ? t("dashboard.importedOne")
             : t("dashboard.importedMany", { count: result.reportsImported });
-        setMessage(result.settingsImported ? `${base} ${t("dashboard.importedSettings")}` : base);
+        setMessage(
+          result.settingsImported || result.profileImported
+            ? `${base} ${t("dashboard.importedSettings")}`
+            : base,
+        );
       }
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t("dashboard.importFailed"));
     } finally {
-      event.target.value = "";
+      setImportState(null);
     }
   };
 
@@ -276,7 +323,7 @@ export default function DashboardPage() {
               <Upload size={14} />
               {t("common.import")}
             </button>
-            <button className="cbr-btn cbr-btn-outline cbr-btn-sm" onClick={handleExportAll}>
+            <button className="cbr-btn cbr-btn-outline cbr-btn-sm" onClick={openExportDialog}>
               <Download size={14} />
               {t("common.backup")}
             </button>
@@ -517,6 +564,85 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Export selection dialog */}
+      {exportOpen && (
+        <SelectionDialog
+          title={t("backup.exportTitle")}
+          desc={t("backup.exportDesc")}
+          confirmLabel={t("backup.export")}
+          rows={[
+            {
+              key: "reports",
+              label: t("backup.reports"),
+              hint: t("backup.reportsCount", { count: reports.length }),
+              available: reports.length > 0,
+            },
+            {
+              key: "name",
+              label: t("backup.name"),
+              hint: profile?.displayName || "",
+              available: Boolean(profile?.displayName),
+            },
+            { key: "logo", label: t("backup.logo"), hint: "", available: Boolean(settings.logo) },
+            {
+              key: "primaryColor",
+              label: t("backup.primaryColor"),
+              hint: (settings.primaryColor || "").toUpperCase(),
+              available: Boolean(settings.primaryColor),
+            },
+            {
+              key: "ai",
+              label: t("backup.ai"),
+              hint: "",
+              available: Boolean(settings.openRouterApiKey || settings.redactionRules.length),
+            },
+          ]}
+          selection={exportSelection}
+          onChange={setExportSelection}
+          onCancel={() => setExportOpen(false)}
+          onConfirm={() => void handleExportConfirm()}
+          emptyLabel={t("backup.notAvailableExport")}
+          nothingSelected={t("backup.nothingSelected")}
+        />
+      )}
+
+      {/* Import selection dialog */}
+      {importState && (
+        <SelectionDialog
+          title={t("backup.importTitle")}
+          desc={t("backup.importDesc")}
+          confirmLabel={t("backup.import")}
+          rows={[
+            {
+              key: "reports",
+              label: t("backup.reports"),
+              hint: t("backup.reportsCount", { count: importState.info.reportsCount }),
+              available: importState.info.reportsCount > 0,
+            },
+            {
+              key: "name",
+              label: t("backup.name"),
+              hint: importState.info.name || "",
+              available: Boolean(importState.info.name),
+            },
+            { key: "logo", label: t("backup.logo"), hint: "", available: importState.info.hasLogo },
+            {
+              key: "primaryColor",
+              label: t("backup.primaryColor"),
+              hint: "",
+              available: importState.info.hasPrimaryColor,
+            },
+            { key: "ai", label: t("backup.ai"), hint: "", available: importState.info.hasAi },
+          ]}
+          selection={importState.selection}
+          onChange={(selection) => setImportState({ ...importState, selection })}
+          onCancel={() => setImportState(null)}
+          onConfirm={() => void handleImportConfirm()}
+          emptyLabel={t("backup.notAvailableImport")}
+          nothingSelected={t("backup.nothingSelected")}
+        />
+      )}
+
       {/* Off-screen render for PDF export */}
       {exportReport && (
         <div
@@ -535,5 +661,94 @@ export default function DashboardPage() {
         </div>
       )}
     </main>
+  );
+}
+
+interface SelectionRow {
+  key: keyof SnapshotSelection;
+  label: string;
+  hint: string;
+  available: boolean;
+}
+
+interface SelectionDialogProps {
+  title: string;
+  desc: string;
+  confirmLabel: string;
+  rows: SelectionRow[];
+  selection: SnapshotSelection;
+  onChange: (selection: SnapshotSelection) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+  emptyLabel: string;
+  nothingSelected: string;
+}
+
+function SelectionDialog({
+  title,
+  desc,
+  confirmLabel,
+  rows,
+  selection,
+  onChange,
+  onCancel,
+  onConfirm,
+  emptyLabel,
+  nothingSelected,
+}: SelectionDialogProps) {
+  const t = useT();
+  const anySelected = rows.some((row) => row.available && selection[row.key]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+      <div className="mx-4 w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">{title}</h2>
+        <p className="mb-4 text-sm text-slate-500">{desc}</p>
+
+        <div className="flex flex-col gap-1.5">
+          {rows.map((row) => (
+            <label
+              key={row.key}
+              className={`flex items-center gap-3 rounded-lg border p-3 ${
+                row.available
+                  ? "cursor-pointer border-slate-200 hover:bg-slate-50"
+                  : "border-slate-100 opacity-50"
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="h-4 w-4 shrink-0 accent-primary"
+                checked={row.available && selection[row.key]}
+                disabled={!row.available}
+                onChange={(e) => onChange({ ...selection, [row.key]: e.target.checked })}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-slate-800">{row.label}</span>
+                <span className="block truncate text-xs text-slate-400">
+                  {row.available ? row.hint : emptyLabel}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+
+        {!anySelected && <p className="mt-3 text-sm text-amber-600">{nothingSelected}</p>}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" className="cbr-btn cbr-btn-ghost" onClick={onCancel}>
+            {t("common.cancel")}
+          </button>
+          <button
+            type="button"
+            className="cbr-btn cbr-btn-primary"
+            onClick={onConfirm}
+            disabled={!anySelected}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+      <div className="fixed inset-0 -z-10" onClick={onCancel} />
+    </div>
   );
 }

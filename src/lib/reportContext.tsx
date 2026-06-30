@@ -45,8 +45,12 @@ export function serializeReportForAi(report: Report): string {
       )}`,
     );
   }
-  if (report.threatLandscape) {
-    parts.push(`Threat landscape: ${report.threatLandscape}`);
+  if (report.threatLandscape.length) {
+    parts.push(
+      `Threat landscape:\n${joinList(
+        report.threatLandscape.map((item) => `${item.text} (${item.trend})`),
+      )}`,
+    );
   }
   if (report.kpis.length) {
     parts.push(
@@ -65,32 +69,23 @@ export function serializeReportForAi(report: Report): string {
       )}`,
     );
   }
-  const program = report.programStatus;
-  if (program.achievements.length || program.challenges.length) {
-    parts.push(
-      `Program status (${program.status}). Achievements:\n${joinList(program.achievements)}\nChallenges:\n${joinList(program.challenges)}`,
-    );
-  }
-  const budget = report.budgetResources;
-  if (budget.budget || budget.allocation || budget.constraints) {
-    parts.push(
-      `Budget & resources: ${budget.budget}; allocation: ${budget.allocation}; constraints: ${budget.constraints}`,
-    );
-  }
-  const compliance = report.complianceAudit;
-  if (compliance.findings.length || compliance.gaps.length) {
-    parts.push(
-      `Compliance (${compliance.status}). Findings:\n${joinList(compliance.findings)}\nGaps:\n${joinList(compliance.gaps)}`,
-    );
-  }
-  const supply = report.supplyChainRisk;
-  if (supply.risks.length || supply.assessment) {
-    parts.push(`Supply chain risk: ${supply.assessment}\n${joinList(supply.risks)}`);
-  }
+  const domain = (label: string, items: typeof report.processItems) => {
+    if (items.length) {
+      parts.push(`${label}:\n${joinList(items.map((item) => `${item.text} (${item.trend})`))}`);
+    }
+  };
+  domain("Process", report.processItems);
+  domain("Human", report.humanItems);
+  domain("Technology", report.technologyItems);
   if (report.initiatives.length) {
     parts.push(
       `Initiatives:\n${joinList(
-        report.initiatives.map((i) => `${i.name} (${i.status}, ${i.progress}%)`),
+        report.initiatives.map(
+          (i) =>
+            `${i.name} (${i.status}, ${i.progress}%)` +
+            (i.statusNote ? ` — ${i.statusNote}` : "") +
+            (i.blockers ? ` [blocked: ${i.blockers}]` : ""),
+        ),
       )}`,
     );
   }

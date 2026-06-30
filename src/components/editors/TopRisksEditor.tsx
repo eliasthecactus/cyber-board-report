@@ -7,9 +7,16 @@ import { useT } from "@/lib/i18n";
 interface TopRisksEditorProps {
   data: Risk[];
   onUpdate: (data: Risk[]) => void;
+  showRiskMatrix: boolean;
+  onShowRiskMatrixChange: (value: boolean) => void;
 }
 
-export default function TopRisksEditor({ data, onUpdate }: TopRisksEditorProps) {
+export default function TopRisksEditor({
+  data,
+  onUpdate,
+  showRiskMatrix,
+  onShowRiskMatrixChange,
+}: TopRisksEditorProps) {
   const t = useT();
   const addRisk = () => {
     const newRisk: Risk = {
@@ -45,6 +52,21 @@ export default function TopRisksEditor({ data, onUpdate }: TopRisksEditorProps) 
     <div>
       <h2 className="text-lg font-semibold text-slate-900">{t("ed.risks.title")}</h2>
       <p className="text-sm text-slate-500 mb-5">{t("ed.risks.desc")}</p>
+
+      <label className="mb-5 flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <input
+          type="checkbox"
+          checked={showRiskMatrix}
+          onChange={(e) => onShowRiskMatrixChange(e.target.checked)}
+          className="h-4 w-4 shrink-0 accent-primary"
+        />
+        <span>
+          <span className="block text-sm font-medium text-slate-700">
+            {t("ed.risks.showMatrixLabel")}
+          </span>
+          <span className="block text-xs text-slate-500">{t("ed.risks.showMatrixDesc")}</span>
+        </span>
+      </label>
 
       <div className="flex flex-col gap-4 mb-4">
         {data.map((risk) => (
