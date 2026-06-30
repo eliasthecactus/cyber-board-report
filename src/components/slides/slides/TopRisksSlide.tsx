@@ -23,7 +23,7 @@ const cellColor: Record<string, string> = {
   gray: "bg-slate-50 text-slate-800",
 };
 
-const MAX_RISKS = 4;
+const severityRank: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
 
 export default function TopRisksSlide({ report }: TopRisksSlideProps) {
   const t = useT();
@@ -32,13 +32,15 @@ export default function TopRisksSlide({ report }: TopRisksSlideProps) {
   const getRiskColor = (likelihood: string, impact: string) =>
     riskLevels[likelihood]?.[impact] || "gray";
 
-  const criticalRisks = report.topRisks.filter(
-    (r) =>
-      r.likelihood === "critical" ||
-      r.businessImpact === "critical" ||
-      (r.likelihood === "high" && r.businessImpact === "high"),
-  );
-  const shownRisks = (criticalRisks.length ? criticalRisks : report.topRisks).slice(0, MAX_RISKS);
+  // Show the highest-severity risks first, but always fill up to the limit
+  // instead of dropping non-critical risks. With the matrix hidden the list is
+  // a two-column grid, so it has room for more.
+  const maxRisks = report.showRiskMatrix ? 4 : 6;
+  const riskScore = (r: { likelihood: string; businessImpact: string }) =>
+    (severityRank[r.likelihood] || 0) + (severityRank[r.businessImpact] || 0);
+  const shownRisks = [...report.topRisks]
+    .sort((a, b) => riskScore(b) - riskScore(a))
+    .slice(0, maxRisks);
 
   const criticalCount = report.topRisks.filter(
     (r) => r.likelihood === "critical" || r.businessImpact === "critical",
