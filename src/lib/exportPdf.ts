@@ -10,8 +10,9 @@ export interface PdfExportCallbacks {
 
 export interface PdfExportOptions {
   /**
-   * Compressed export: renders at the authored slide resolution as JPEG
-   * instead of a 2x PNG. Much smaller file, slightly softer text.
+   * Compressed export: same 2x render resolution as the original, but
+   * embedded as JPEG instead of PNG. Much smaller file with visually
+   * identical quality.
    */
   compressed?: boolean;
 }
@@ -37,9 +38,9 @@ export async function exportReportToPdf(
   });
 
   const compressed = Boolean(options.compressed);
-  const scale = compressed ? 1 : 2;
   const imageFormat = compressed ? "image/jpeg" : "image/png";
   const imageKind = compressed ? "JPEG" : "PNG";
+  const quality = compressed ? 0.98 : undefined;
 
   try {
     for (let slideIndex = 0; slideIndex < TOTAL_SLIDES; slideIndex += 1) {
@@ -54,14 +55,14 @@ export async function exportReportToPdf(
         backgroundColor: "#ffffff",
         width: SLIDE_WIDTH,
         height: SLIDE_HEIGHT,
-        scale,
+        scale: 2,
         useCORS: true,
       });
 
       if (slideIndex > 0) {
         pdf.addPage([SLIDE_WIDTH, SLIDE_HEIGHT], "landscape");
       }
-      pdf.addImage(canvas.toDataURL(imageFormat, compressed ? 0.95 : undefined), imageKind, 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT);
+      pdf.addImage(canvas.toDataURL(imageFormat, quality), imageKind, 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT);
     }
 
     const suffix = compressed ? "-compressed" : "";
