@@ -17,6 +17,7 @@ import type { Report } from "@/types";
 import { navigateTo } from "@/lib/navigation";
 import { getReport } from "@/lib/storage";
 import { exportReportToPdf } from "@/lib/exportPdf";
+import PdfExportDialog, { type PdfExportMode } from "@/components/PdfExportDialog";
 import { useT } from "@/lib/i18n";
 
 interface SlidesViewerPageProps {
@@ -33,6 +34,7 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
   const [isPresenting, setIsPresenting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportSlide, setExportSlide] = useState<number | null>(null);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,21 +72,25 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
     return () => window.removeEventListener("keydown", handleKeydown);
   }, []);
 
-  const exportToPDF = async () => {
+  const exportToPDF = async (mode: PdfExportMode) => {
     if (!report) return;
     setExporting(true);
     try {
-      await exportReportToPdf(report, {
-        onSlide: async (slideIndex) => {
-          flushSync(() => setExportSlide(slideIndex));
-          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-          return (exportRef.current?.firstElementChild as HTMLElement | null);
+      await exportReportToPdf(
+        report,
+        {
+          onSlide: async (slideIndex) => {
+            flushSync(() => setExportSlide(slideIndex));
+            await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+            return (exportRef.current?.firstElementChild as HTMLElement | null);
+          },
+          onDone: () => {
+            setExportSlide(null);
+            setExporting(false);
+          },
         },
-        onDone: () => {
-          setExportSlide(null);
-          setExporting(false);
-        },
-      });
+        { compressed: mode === "compressed" },
+      );
     } catch (error) {
       console.error("Export error:", error);
       setExportSlide(null);
@@ -168,7 +174,7 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
             </button>
             <button
               className="cbr-btn cbr-btn-success cbr-btn-sm"
-              onClick={() => void exportToPDF()}
+              onClick={() => setPdfDialogOpen(true)}
               disabled={exporting}
             >
               {exporting ? (
@@ -221,6 +227,18 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
           </nav>
         </div>
       </section>
+
+      {/* PDF export mode dialog */}
+      {pdfDialogOpen && (
+        <PdfExportDialog
+          reportLabel={t("slidesView.title", { quarter: report.quarter, year: report.year })}
+          onCancel={() => setPdfDialogOpen(false)}
+          onChoose={(mode) => {
+            setPdfDialogOpen(false);
+            void exportToPDF(mode);
+          }}
+        />
+      )}
 
       {/* Off-screen render for PDF export */}
       <div

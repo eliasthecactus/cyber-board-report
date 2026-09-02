@@ -81,6 +81,14 @@ const en: Dict = {
   "backup.notAvailableImport": "Not in this file",
   "backup.nothingSelected": "Select at least one item.",
 
+  // PDF export --------------------------------------------------------------
+  "pdfExport.title": "Export PDF",
+  "pdfExport.desc": "Choose a PDF version for {report}.",
+  "pdfExport.original": "Original (full quality)",
+  "pdfExport.originalHint": "High-resolution PNG, very large file",
+  "pdfExport.compressed": "Compressed",
+  "pdfExport.compressedHint": "Small file, ideal for email and sharing",
+
   // Report editor -----------------------------------------------------------
   "editor.boardReport": "{quarter} {year} Board Report",
   "editor.updated": "Updated {date}",
@@ -581,6 +589,14 @@ const de: Dict = {
   "backup.notAvailableExport": "Nichts gespeichert",
   "backup.notAvailableImport": "Nicht in dieser Datei",
   "backup.nothingSelected": "Wählen Sie mindestens ein Element aus.",
+
+  // PDF export
+  "pdfExport.title": "PDF exportieren",
+  "pdfExport.desc": "Wählen Sie eine PDF-Version für {report}.",
+  "pdfExport.original": "Original (volle Qualität)",
+  "pdfExport.originalHint": "Hochauflösendes PNG, sehr große Datei",
+  "pdfExport.compressed": "Komprimiert",
+  "pdfExport.compressedHint": "Kleine Datei, ideal für E-Mail und Weitergabe",
 
   // Report editor
   "editor.boardReport": "Vorstandsbericht {quarter} {year}",

@@ -8,9 +8,18 @@ export interface PdfExportCallbacks {
   onDone: () => void;
 }
 
+export interface PdfExportOptions {
+  /**
+   * Compressed export: renders at the authored slide resolution as JPEG
+   * instead of a 2x PNG. Much smaller file, slightly softer text.
+   */
+  compressed?: boolean;
+}
+
 export async function exportReportToPdf(
   report: Report,
   callbacks: PdfExportCallbacks,
+  options: PdfExportOptions = {},
 ): Promise<void> {
   const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
     import("html2canvas-pro"),
@@ -27,6 +36,11 @@ export async function exportReportToPdf(
     format: [SLIDE_WIDTH, SLIDE_HEIGHT],
   });
 
+  const compressed = Boolean(options.compressed);
+  const scale = compressed ? 1 : 2;
+  const imageFormat = compressed ? "image/jpeg" : "image/png";
+  const imageKind = compressed ? "JPEG" : "PNG";
+
   try {
     for (let slideIndex = 0; slideIndex < TOTAL_SLIDES; slideIndex += 1) {
       const slideEl = await callbacks.onSlide(slideIndex);
@@ -40,17 +54,18 @@ export async function exportReportToPdf(
         backgroundColor: "#ffffff",
         width: SLIDE_WIDTH,
         height: SLIDE_HEIGHT,
-        scale: 2,
+        scale,
         useCORS: true,
       });
 
       if (slideIndex > 0) {
         pdf.addPage([SLIDE_WIDTH, SLIDE_HEIGHT], "landscape");
       }
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT);
+      pdf.addImage(canvas.toDataURL(imageFormat, compressed ? 0.95 : undefined), imageKind, 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT);
     }
 
-    pdf.save(`${report.quarter}-${report.year}-board-report.pdf`);
+    const suffix = compressed ? "-compressed" : "";
+    pdf.save(`${report.quarter}-${report.year}-board-report${suffix}.pdf`);
   } finally {
     callbacks.onDone();
   }

@@ -20,6 +20,7 @@ import { backupFilename, downloadJson, readJsonFile } from "@/lib/files";
 import { createEmptyReport, cloneReport } from "@/lib/reportFactory";
 import { navigateTo } from "@/lib/navigation";
 import { exportReportToPdf } from "@/lib/exportPdf";
+import PdfExportDialog, { type PdfExportMode } from "@/components/PdfExportDialog";
 import SlideRenderer from "@/components/slides/SlideRenderer";
 import { SLIDE_WIDTH, SLIDE_HEIGHT } from "@/components/slides/slideConstants";
 import { useT } from "@/lib/i18n";
@@ -67,6 +68,7 @@ export default function DashboardPage() {
   const [exportReport, setExportReport] = useState<Report | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportSelection, setExportSelection] = useState<SnapshotSelection>(FULL_SELECTION);
+  const [pdfTarget, setPdfTarget] = useState<Report | null>(null);
   const [importState, setImportState] = useState<{
     payload: unknown;
     info: SnapshotInfo;
@@ -186,24 +188,28 @@ export default function DashboardPage() {
     );
   };
 
-  const handleExportPdf = async (report: Report) => {
+  const handleExportPdf = async (report: Report, mode: PdfExportMode) => {
     setExportingReportId(report.id);
     setExportReport(report);
     // Wait for render of the off-screen slide area
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
     try {
-      await exportReportToPdf(report, {
-        onSlide: async (slideIndex) => {
-          setExportSlide(slideIndex);
-          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-          return (exportRef.current?.firstElementChild as HTMLElement | null);
+      await exportReportToPdf(
+        report,
+        {
+          onSlide: async (slideIndex) => {
+            setExportSlide(slideIndex);
+            await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+            return (exportRef.current?.firstElementChild as HTMLElement | null);
+          },
+          onDone: () => {
+            setExportSlide(null);
+            setExportReport(null);
+            setExportingReportId(null);
+          },
         },
-        onDone: () => {
-          setExportSlide(null);
-          setExportReport(null);
-          setExportingReportId(null);
-        },
-      });
+        { compressed: mode === "compressed" },
+      );
     } catch (error) {
       console.error("PDF export error:", error);
       setExportSlide(null);
@@ -452,7 +458,7 @@ export default function DashboardPage() {
                   <button
                     className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon"
                     title={t("dashboard.exportPdf")}
-                    onClick={() => void handleExportPdf(report)}
+                    onClick={() => setPdfTarget(report)}
                     disabled={exportingReportId === report.id}
                   >
                     {exportingReportId === report.id ? (
@@ -655,6 +661,19 @@ export default function DashboardPage() {
           onConfirm={() => void handleImportConfirm()}
           emptyLabel={t("backup.notAvailableImport")}
           nothingSelected={t("backup.nothingSelected")}
+        />
+      )}
+
+      {/* PDF export mode dialog */}
+      {pdfTarget && (
+        <PdfExportDialog
+          reportLabel={`${pdfTarget.quarter} ${pdfTarget.year}`}
+          onCancel={() => setPdfTarget(null)}
+          onChoose={(mode) => {
+            const report = pdfTarget;
+            setPdfTarget(null);
+            void handleExportPdf(report, mode);
+          }}
         />
       )}
 
