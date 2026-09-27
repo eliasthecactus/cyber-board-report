@@ -133,7 +133,7 @@ jobs:
   build-pages:
     name: Build GitHub Pages site
     needs: verify
-    if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev')
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref_name == 'main' || github.ref_name == 'dev')
     runs-on: ubuntu-latest
 
     steps:
@@ -214,3 +214,9 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+        env:
+          # deploy-pages identifies a deployment by GITHUB_SHA, and Pages keeps
+          # the existing deployment when that version was deployed before. main
+          # and dev often point at the same commit (e.g. after a fast-forward
+          # merge) while the site content differs, so make it unique per run.
+          GITHUB_SHA: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
