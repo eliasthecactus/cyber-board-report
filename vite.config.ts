@@ -26,6 +26,19 @@ export const CONTENT_SECURITY_POLICY = [
   "form-action 'none'",
 ].join("; ");
 
+/** "dev" for the /dev/ preview deployment (see .github/workflows/release.yml). */
+const channel = process.env.VITE_APP_CHANNEL === "dev" ? "dev" : "prod";
+const appName = channel === "dev" ? "Cyber Board Reports (Dev)" : "Cyber Board Reports";
+
+/** Mark the dev build in the tab title. */
+function channelTitle(): Plugin {
+  return {
+    name: "channel-title",
+    transformIndexHtml: (html) =>
+      channel === "dev" ? html.replace("<title>Cyber Board Reports</title>", `<title>${appName}</title>`) : html,
+  };
+}
+
 function contentSecurityPolicy(): Plugin {
   return {
     name: "content-security-policy",
@@ -45,16 +58,17 @@ export default defineConfig({
   plugins: [
     react(),
     contentSecurityPolicy(),
+    channelTitle(),
     // Precache the static build so the app keeps working offline, matching
     // its local-first promise. Reports never leave the browser either way.
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "script-defer",
       manifest: {
-        name: "Cyber Board Reports",
-        short_name: "Board Reports",
+        name: appName,
+        short_name: channel === "dev" ? "Board Reports Dev" : "Board Reports",
         description: "Local-first cyber security board report editor",
-        theme_color: "#1e3a5f",
+        theme_color: channel === "dev" ? "#b45309" : "#1e3a5f",
         background_color: "#f8fafc",
         display: "standalone",
         start_url: "./",
@@ -65,6 +79,9 @@ export default defineConfig({
         // The bundled display font is ~1.6 MB per style.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         navigateFallback: "index.html",
+        // The dev build lives in /dev/ inside production's service-worker
+        // scope. Never answer its navigations with the production app.
+        navigateFallbackDenylist: channel === "prod" ? [/\/dev(\/|$)/] : [],
       },
     }),
   ],

@@ -5,6 +5,7 @@ import { useT } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
 import { describeError } from "@/lib/errors";
 import { PageMessage, PageSpinner } from "@/components/ui/PageState";
+import { IS_DEV_CHANNEL } from "@/lib/channel";
 
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const ReportEditorPage = lazy(() => import("@/pages/ReportEditorPage"));
@@ -42,6 +43,11 @@ export default function App() {
 
   return (
     <>
+      {IS_DEV_CHANNEL && (
+        <div className="bg-amber-400 px-4 py-1 text-center text-xs font-semibold text-amber-950">
+          {t("channel.devBanner")}
+        </div>
+      )}
       {storageError !== null && (
         <div role="alert" className="flex items-start gap-2 bg-red-600 px-4 py-2 text-sm text-white">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />

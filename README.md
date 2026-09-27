@@ -88,15 +88,32 @@ The file format and schema versioning are documented in [docs/data-model.md](doc
 
 `.github/workflows/release.yml` (all actions pinned to commit SHAs):
 
-- On pull requests to `main`: lint, unit tests, build, `npm audit --omit=dev`, Playwright e2e tests.
-- On pushes to `main`: the same checks, then publish a multi-arch Docker image (`linux/amd64`, `linux/arm64`) to GitHub Container Registry and deploy the static build to GitHub Pages.
+- On pull requests to `main` or `dev`: lint, unit tests, build, `npm audit --omit=dev`, Playwright e2e tests.
+- On pushes to `main` or `dev`: the same checks, then publish a multi-arch Docker image (`linux/amd64`, `linux/arm64`) to GitHub Container Registry and deploy GitHub Pages.
 - On `v*.*.*` tags and published releases: the checks, then a versioned image.
 
 Image name: `ghcr.io/<owner>/<repo>`, tagged `latest` (default branch), branch name, semver and `sha-<commit>`.
 
 Dependabot (`.github/dependabot.yml`) opens weekly update PRs for npm, GitHub Actions and the Docker base images.
 
-For GitHub Pages, set the repository's Pages source to **GitHub Actions**.
+### Production and dev deployments
+
+| Branch | GitHub Pages | Docker tag |
+|---|---|---|
+| `main` | `https://<owner>.github.io/<repo>/` | `latest`, `main` |
+| `dev` | `https://<owner>.github.io/<repo>/dev/` | `dev` |
+
+Work on `dev` (or on feature branches merged into `dev`), check it on `/dev/`, then merge `dev` into `main` to release.
+
+GitHub Pages serves one site per repository and every deployment replaces the whole site. So each push to either branch builds **both** branches and publishes them together.
+
+The dev build is made with `VITE_APP_CHANNEL=dev`. Because it shares the browser origin with production, it:
+
+- uses its own IndexedDB database (`cyber-board-reports-local-dev`), so dev data never mixes with production reports;
+- shows a "Development version" banner, "(Dev)" in the tab title and its own PWA name;
+- is excluded from production's service-worker navigation fallback, so `/dev/` always loads the dev app.
+
+Setup (already done for this repository): set the Pages source to **GitHub Actions**, and allow both `main` and `dev` under **Settings → Environments → github-pages → Deployment branches**.
 
 ## Tech stack
 

@@ -588,6 +588,7 @@ export const en = {
   "settings.storagePersistent": "The browser has agreed to keep this app's data and not clear it automatically when space runs low.",
   "settings.storageBestEffort": "The browser may clear this app's data when disk space runs low. Request persistent storage and keep backups.",
   "settings.storageRequest": "Request persistent storage",
+  "channel.devBanner": "Development version – data here is separate from the production app and may be reset.",
 };
 
 export type TranslationKey = keyof typeof en;

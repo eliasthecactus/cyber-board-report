@@ -1,8 +1,10 @@
 import type { AppSettings, Report } from "@/types";
 import { createId, normalizeReport, reportSortValue } from "@/lib/reportFactory";
 import { normalizeSettings } from "@/lib/settingsDefaults";
+import { IS_DEV_CHANNEL } from "@/lib/channel";
 
-const DB_NAME = "cyber-board-reports-local";
+// Dev and prod share an origin on GitHub Pages, so dev gets its own database.
+const DB_NAME = IS_DEV_CHANNEL ? "cyber-board-reports-local-dev" : "cyber-board-reports-local";
 const DB_VERSION = 1;
 const REPORT_STORE = "reports";
 const SETTINGS_STORE = "settings";
@@ -112,7 +114,8 @@ function openDatabase(): Promise<IDBDatabase> {
     })
       .then(async (db) => {
         try {
-          await migrateLegacyLocalStorage(db);
+          // The legacy data belongs to production; dev must not take it.
+          if (!IS_DEV_CHANNEL) await migrateLegacyLocalStorage(db);
         } catch (error) {
           // Keep the legacy copy in place and try again on the next start.
           console.warn("Could not migrate legacy localStorage data.", error);

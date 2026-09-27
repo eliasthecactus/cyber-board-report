@@ -608,4 +608,5 @@ export const de: Record<TranslationKey, string> = {
   "settings.storagePersistent": "Der Browser behält die Daten dieser App und löscht sie nicht automatisch bei Speicherknappheit.",
   "settings.storageBestEffort": "Der Browser kann die Daten dieser App bei knappem Speicherplatz löschen. Fordern Sie dauerhaften Speicher an und erstellen Sie Backups.",
   "settings.storageRequest": "Dauerhaften Speicher anfordern",
+  "channel.devBanner": "Entwicklungsversion – die Daten hier sind von der Produktivversion getrennt und können zurückgesetzt werden.",
 };
