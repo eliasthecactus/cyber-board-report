@@ -208,6 +208,8 @@ jobs:
     permissions:
       pages: write
       id-token: write
+      # Only for the marker commit below; no branch or tag is changed.
+      contents: write
 
     environment:
       name: github-pages
@@ -218,8 +220,9 @@ jobs:
       # again, and actions/deploy-pages always uses the commit SHA as that
       # version. main and dev often point at the same commit (a new dev
       # branch, fast-forward merges) while the site content differs, so a
-      # deployment would be silently skipped. Call the same Pages API
-      # directly with a version that is unique per run.
+      # deployment would be silently skipped. The version must be a commit in
+      # this repository, so create a marker commit (same tree, not on any
+      # branch) per run and deploy through the Pages API with its SHA.
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -227,7 +230,14 @@ jobs:
           ARTIFACT_ID: ${{ needs.build-pages.outputs.artifact_id }}
         with:
           script: |
-            const version = `${context.sha}-${context.runId}-${process.env.GITHUB_RUN_ATTEMPT}`;
+            const { data: head } = await github.rest.git.getCommit({ ...context.repo, commit_sha: context.sha });
+            const { data: marker } = await github.rest.git.createCommit({
+              ...context.repo,
+              message: `Pages deployment from ${context.ref} (run ${context.runId})`,
+              tree: head.tree.sha,
+              parents: [context.sha],
+            });
+            const version = marker.sha;
             const { data: deployment } = await github.request("POST /repos/{owner}/{repo}/pages/deployments", {
               ...context.repo,
               artifact_id: Number(process.env.ARTIFACT_ID),
