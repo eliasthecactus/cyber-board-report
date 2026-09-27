@@ -1,6 +1,7 @@
 import { Incident } from "@/types";
 import { createId } from "@/lib/reportFactory";
 import { AiTextarea } from "@/components/ui/AiTextarea";
+import { Trash2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 
 interface IncidentsEditorProps {
@@ -20,7 +21,8 @@ export default function IncidentsEditor({
       businessImpact: "",
       outcome: "",
       lessonsLearned: "",
-      quarter: new Date().getFullYear() + "-Q1",
+      severity: "medium",
+      quarter: "",
     };
     onUpdate([...data, newIncident]);
   };
@@ -42,7 +44,7 @@ export default function IncidentsEditor({
   const incidentAiContext = (incident: Incident): string =>
     [
       incident.title.trim() && `${t("ed.inc.titlePlaceholder")}: ${incident.title.trim()}`,
-      incident.severity && `${t("ed.risks.impact")}: ${t(`ed.inc.severity.${incident.severity}`)}`,
+      incident.severity && `${t("ed.inc.severityLabel")}: ${t(`ed.inc.severity.${incident.severity}`)}`,
       incident.businessImpact.trim() &&
         `${t("ed.inc.impactLabel")} ${incident.businessImpact.trim()}`,
       incident.outcome.trim() && `${t("ed.inc.outcomeLabel")} ${incident.outcome.trim()}`,
@@ -64,6 +66,7 @@ export default function IncidentsEditor({
               <input
                 type="text"
                 placeholder={t("ed.inc.titlePlaceholder")}
+                aria-label={t("ed.inc.titlePlaceholder")}
                 value={incident.title}
                 onChange={(e) => updateIncident(incident.id, { title: e.target.value })}
                 className="form-input font-semibold text-base w-full mb-2"
@@ -76,6 +79,7 @@ export default function IncidentsEditor({
                     updateIncident(incident.id, { severity: e.target.value as Incident["severity"] })
                   }
                   className="form-input w-36"
+                  aria-label={t("ed.inc.severityLabel")}
                 >
                   <option value="low">{t("ed.inc.severity.low")}</option>
                   <option value="medium">{t("ed.inc.severity.medium")}</option>
@@ -86,9 +90,11 @@ export default function IncidentsEditor({
                 <div className="ml-auto">
                   <button
                     onClick={() => deleteIncident(incident.id)}
-                    className="cbr-btn cbr-btn-danger cbr-btn-sm"
+                    className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon text-red-500"
+                    aria-label={t("common.deleteNamed", { name: incident.title || t("ed.item.untitled") })}
+                    title={t("common.delete")}
                   >
-                    {t("common.delete")}
+                    <Trash2 size={15} aria-hidden />
                   </button>
                 </div>
               </div>
@@ -96,11 +102,10 @@ export default function IncidentsEditor({
 
             <div className="mt-2.5 grid gap-2.5">
               <div>
-                <label>
-                  <span className="text-sm font-medium text-slate-700 font-semibold">{t("ed.inc.impactLabel")}</span>
-                </label>
+                <span className="text-sm font-semibold text-slate-700" aria-hidden>{t("ed.inc.impactLabel")}</span>
                 <AiTextarea
                   aiLabel={t("ed.inc.impactLabel")}
+                  aria-label={t("ed.inc.impactLabel")}
                   aiContext={incidentAiContext(incident)}
                   placeholder={t("ed.inc.impactPlaceholder")}
                   value={incident.businessImpact}
@@ -112,11 +117,10 @@ export default function IncidentsEditor({
               </div>
 
               <div>
-                <label>
-                  <span className="text-sm font-medium text-slate-700 font-semibold">{t("ed.inc.outcomeLabel")}</span>
-                </label>
+                <span className="text-sm font-semibold text-slate-700" aria-hidden>{t("ed.inc.outcomeLabel")}</span>
                 <AiTextarea
                   aiLabel={t("ed.inc.outcomeLabel")}
+                  aria-label={t("ed.inc.outcomeLabel")}
                   aiContext={incidentAiContext(incident)}
                   placeholder={t("ed.inc.outcomePlaceholder")}
                   value={incident.outcome}
@@ -126,11 +130,10 @@ export default function IncidentsEditor({
               </div>
 
               <div>
-                <label>
-                  <span className="text-sm font-medium text-slate-700 font-semibold">{t("ed.inc.lessonsLabel")}</span>
-                </label>
+                <span className="text-sm font-semibold text-slate-700" aria-hidden>{t("ed.inc.lessonsLabel")}</span>
                 <AiTextarea
                   aiLabel={t("ed.inc.lessonsLabel")}
+                  aria-label={t("ed.inc.lessonsLabel")}
                   aiContext={incidentAiContext(incident)}
                   placeholder={t("ed.inc.lessonsPlaceholder")}
                   value={incident.lessonsLearned}

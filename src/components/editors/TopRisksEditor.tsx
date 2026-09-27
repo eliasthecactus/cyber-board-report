@@ -25,7 +25,7 @@ export default function TopRisksEditor({
       likelihood: "low",
       businessImpact: "low",
       trend: "stable",
-      historicalData: [],
+      description: "",
     };
     onUpdate([...data, newRisk]);
   };
@@ -75,6 +75,7 @@ export default function TopRisksEditor({
               <input
                 type="text"
                 placeholder={t("ed.risks.namePlaceholder")}
+                aria-label={t("ed.risks.nameLabel")}
                 value={risk.name}
                 onChange={(e) => updateRisk(risk.id, { name: e.target.value })}
                 className="form-input font-semibold flex-1"
@@ -82,9 +83,10 @@ export default function TopRisksEditor({
               <button
                 onClick={() => deleteRisk(risk.id)}
                 className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon text-red-500"
-                aria-label={t("common.delete")}
+                aria-label={t("common.deleteNamed", { name: risk.name || t("ed.item.untitled") })}
+                title={t("common.delete")}
               >
-                <Trash2 size={15} />
+                <Trash2 size={15} aria-hidden />
               </button>
             </div>
 
@@ -141,6 +143,7 @@ export default function TopRisksEditor({
 
             <AiTextarea
               aiLabel={t("ed.risks.descriptionLabel")}
+              aria-label={t("ed.risks.descriptionLabel")}
               aiContext={riskAiContext(risk)}
               placeholder={t("ed.risks.descriptionPlaceholder")}
               value={risk.description || ""}

@@ -1,6 +1,6 @@
 import { Decision } from "@/types";
 import { createId } from "@/lib/reportFactory";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { AiTextarea } from "@/components/ui/AiTextarea";
 import { useT } from "@/lib/i18n";
 
@@ -57,25 +57,27 @@ export default function DecisionsEditor({
               <input
                 type="text"
                 placeholder={t("ed.dec.titlePlaceholder")}
+                aria-label={t("ed.dec.titleLabel")}
                 value={decision.title}
                 onChange={(e) => updateDecision(decision.id, { title: e.target.value })}
                 className="form-input font-semibold text-base flex-1"
               />
               <button
                 onClick={() => deleteDecision(decision.id)}
-                className="cbr-btn cbr-btn-danger cbr-btn-sm"
+                className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon shrink-0 text-red-500"
+                aria-label={t("common.deleteNamed", { name: decision.title || t("ed.item.untitled") })}
+                title={t("common.delete")}
               >
-                {t("common.delete")}
+                <Trash2 size={15} aria-hidden />
               </button>
             </div>
 
             <div className="mt-2.5 grid gap-2.5">
               <div>
-                <label>
-                  <span className="text-sm font-medium text-slate-700 font-semibold">{t("ed.dec.rationaleLabel")}</span>
-                </label>
+                <span className="text-sm font-semibold text-slate-700" aria-hidden>{t("ed.dec.rationaleLabel")}</span>
                 <AiTextarea
                   aiLabel={t("ed.dec.rationaleLabel")}
+                  aria-label={t("ed.dec.rationaleLabel")}
                   aiContext={decisionAiContext(decision)}
                   placeholder={t("ed.dec.rationalePlaceholder")}
                   value={decision.rationale}
@@ -85,11 +87,10 @@ export default function DecisionsEditor({
               </div>
 
               <div>
-                <label>
-                  <span className="text-sm font-medium text-slate-700 font-semibold">{t("ed.dec.impactLabel")}</span>
-                </label>
+                <span className="text-sm font-semibold text-slate-700" aria-hidden>{t("ed.dec.impactLabel")}</span>
                 <AiTextarea
                   aiLabel={t("ed.dec.impactLabel")}
+                  aria-label={t("ed.dec.impactLabel")}
                   aiContext={decisionAiContext(decision)}
                   placeholder={t("ed.dec.impactPlaceholder")}
                   value={decision.impact}
@@ -103,7 +104,7 @@ export default function DecisionsEditor({
       </div>
 
       <button onClick={addDecision} className="cbr-btn cbr-btn-primary mt-4">
-        <Plus size={16} className="mr-1" />
+        <Plus size={16} aria-hidden />
         {t("ed.dec.add")}
       </button>
 

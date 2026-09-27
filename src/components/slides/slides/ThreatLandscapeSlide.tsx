@@ -1,75 +1,20 @@
-import { Report, DomainTrend } from "@/types";
-import { ArrowDownRight, ArrowUpRight, Globe, Minus } from "lucide-react";
+import type { Report } from "@/types";
+import { Globe } from "lucide-react";
 import { useT } from "@/lib/i18n";
-import { SlideFrame } from "../SlideFrame";
-import { usePrimaryColor } from "../slideConstants";
+import DomainSlide from "./DomainSlide";
+import { SLIDE_LIMITS } from "../slideConstants";
 
-interface ThreatLandscapeSlideProps {
-  report: Report;
-}
-
-const MAX_ITEMS = 6;
-
-const trendIcon: Record<DomainTrend, typeof Minus> = {
-  more: ArrowUpRight,
-  stable: Minus,
-  less: ArrowDownRight,
-};
-
-// Neutral color: the arrow conveys direction; we don't imply good vs. bad.
-const TREND_COLOR = "#64748b";
-
-export default function ThreatLandscapeSlide({ report }: ThreatLandscapeSlideProps) {
+export default function ThreatLandscapeSlide({ report }: { report: Report }) {
   const t = useT();
-  const accent = usePrimaryColor();
-  const items = report.threatLandscape.filter((item) => item.text.trim());
-  const shown = items.slice(0, MAX_ITEMS);
-  const remaining = items.length - shown.length;
-
   return (
-    <SlideFrame report={report} accent={accent} title={t("slide.threat.title")} icon={Globe}>
-      {items.length === 0 ? (
-        <p className="text-[15px] italic text-slate-400">{t("slide.threat.none")}</p>
-      ) : (
-        <div className="flex h-full flex-col justify-center gap-3">
-          <div className="grid grid-cols-2 gap-3">
-            {shown.map((item) => {
-              const TrendIcon = trendIcon[item.trend];
-              return (
-                <div key={item.id} className="flex items-start gap-3 rounded-lg bg-slate-50 p-4">
-                  <span
-                    className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white"
-                    style={{ color: TREND_COLOR }}
-                  >
-                    <TrendIcon size={16} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="m-0 text-[15px] font-semibold leading-snug text-slate-900">
-                      {item.text}
-                    </p>
-                    {item.detail && (
-                      <p className="m-0 mt-0.5 text-[13px] leading-snug text-slate-600">
-                        {item.detail}
-                      </p>
-                    )}
-                    <p
-                      className="m-0 mt-1 text-[11px] font-bold uppercase tracking-wider"
-                      style={{ color: TREND_COLOR }}
-                    >
-                      {t(`trend.${item.trend}`)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {remaining > 0 && (
-            <p className="m-0 text-[14px] italic text-slate-400">
-              {t("slide.threat.more", { count: remaining })}
-            </p>
-          )}
-        </div>
-      )}
-    </SlideFrame>
+    <DomainSlide
+      report={report}
+      items={report.threatLandscape}
+      title={t("slide.threat.title")}
+      icon={Globe}
+      max={SLIDE_LIMITS.threats}
+      emptyKey="slide.threat.none"
+      showTrendLabel
+    />
   );
 }

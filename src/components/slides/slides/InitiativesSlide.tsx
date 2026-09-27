@@ -1,37 +1,28 @@
-import { Report } from "@/types";
+import type { Report } from "@/types";
 import { Target } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { SlideFrame } from "../SlideFrame";
-import { usePrimaryColor } from "../slideConstants";
+import { SLIDE_LIMITS } from "../slideConstants";
+import { palette, statusColor } from "../palette";
 
 interface InitiativesSlideProps {
   report: Report;
 }
 
-const statusColor: Record<string, string> = {
-  "on-track": "#065f46",
-  "at-risk": "#92400e",
-  delayed: "#9f1239",
-  "not-started": "#94a3b8",
-};
-
-const MAX_INITIATIVES = 6;
-
 export default function InitiativesSlide({ report }: InitiativesSlideProps) {
   const t = useT();
-  const accent = usePrimaryColor();
-  const initiatives = report.initiatives.slice(0, MAX_INITIATIVES);
+  const initiatives = report.initiatives.slice(0, SLIDE_LIMITS.initiatives);
   const remaining = report.initiatives.length - initiatives.length;
 
   return (
-    <SlideFrame report={report} accent={accent} title={t("slide.initiatives.title")} icon={Target}>
+    <SlideFrame report={report} title={t("slide.initiatives.title")} icon={Target}>
       {report.initiatives.length === 0 ? (
         <p className="text-[15px] italic text-slate-400">{t("slide.initiatives.none")}</p>
       ) : (
         <div className="flex h-full flex-col justify-center gap-3">
           <div className="grid grid-cols-2 gap-3">
             {initiatives.map((init) => {
-              const color = statusColor[init.status] || statusColor["on-track"];
+              const color = statusColor[init.status];
               return (
                 <div key={init.id} className="rounded-lg bg-slate-50 p-3.5">
                   <div className="mb-2 flex items-start justify-between gap-3">
@@ -62,7 +53,7 @@ export default function InitiativesSlide({ report }: InitiativesSlideProps) {
                     </p>
                   )}
                   {init.blockers && (
-                    <p className="m-0 mt-0.5 text-[12px] leading-snug text-rose-700">
+                    <p className="m-0 mt-0.5 text-[12px] leading-snug" style={{ color: palette.blocker }}>
                       {t("slide.initiatives.blockers", { text: init.blockers })}
                     </p>
                   )}
@@ -72,7 +63,7 @@ export default function InitiativesSlide({ report }: InitiativesSlideProps) {
           </div>
           {remaining > 0 && (
             <p className="m-0 text-[14px] italic text-slate-400">
-              {t("slide.threat.more", { count: remaining })}
+              {t("slide.more", { count: remaining })}
             </p>
           )}
         </div>

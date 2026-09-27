@@ -1,7 +1,9 @@
 // Data type definitions for the Cyber Board Report system
 
-export type Likelihood = "low" | "medium" | "high" | "critical";
-export type Impact = "low" | "medium" | "high" | "critical";
+/** Shared four-step scale used for likelihood, impact and severity. */
+export type Level = "low" | "medium" | "high" | "critical";
+export type Likelihood = Level;
+export type Impact = Level;
 export type Trend = "improving" | "stable" | "worsening";
 export type TrendDirection = "up" | "down" | "stable";
 export type InitiativeStatus = "on-track" | "at-risk" | "delayed" | "not-started";
@@ -16,13 +18,6 @@ export interface Risk {
   businessImpact: Impact;
   trend: Trend;
   description?: string;
-  historicalData: HistoricalRisk[];
-}
-
-export interface HistoricalRisk {
-  quarter: string;
-  likelihood: Likelihood;
-  impact: Impact;
 }
 
 export interface KPI {
@@ -37,6 +32,7 @@ export interface KPI {
 }
 
 export interface HistoricalKPI {
+  /** Period label in the form "Q1-2026". */
   quarter: string;
   value: number;
 }
@@ -44,7 +40,7 @@ export interface HistoricalKPI {
 export interface Incident {
   id: string;
   title: string;
-  severity?: "low" | "medium" | "high" | "critical";
+  severity?: Level;
   businessImpact: string;
   outcome: string;
   lessonsLearned: string;
@@ -88,10 +84,12 @@ export interface Decision {
 
 export interface EmergingRisk {
   description: string;
-  impact: "low" | "medium" | "high" | "critical";
+  impact: Level;
 }
 
 export interface Report {
+  /** Version of the report data shape; see docs/data-model.md. */
+  schemaVersion: number;
   id: string;
   quarter: string;
   year: number;
@@ -106,6 +104,8 @@ export interface Report {
   participants: string[];
   /** When false, the Top Risks slide hides the risk matrix and shows text only. */
   showRiskMatrix: boolean;
+  /** When true, slides for sections without content are left out of preview and exports. */
+  hideEmptySlides: boolean;
   executiveSummary: string;
   executiveSummaryHighlight?: string; // Key callout/headline
   topRisks: Risk[];
@@ -117,7 +117,7 @@ export interface Report {
   technologyItems: DomainItem[];
   initiatives: Initiative[];
   outlook: string;
-  emergingRisks?: EmergingRisk[]; // Key risks for outlook
+  emergingRisks: EmergingRisk[]; // Key risks for outlook
   decisionsRequired: Decision[];
 }
 
@@ -146,6 +146,8 @@ export interface AppSettings {
   logo: string;
   /** Primary brand color used across the app and slides (hex). */
   primaryColor: string;
+  /** When the last JSON backup was downloaded (ISO), or "" if never. */
+  lastBackupAt: string;
   updatedAt: string;
 }
 

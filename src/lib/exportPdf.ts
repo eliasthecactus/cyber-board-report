@@ -1,73 +1,96 @@
-import { SLIDE_WIDTH, SLIDE_HEIGHT, TOTAL_SLIDES } from "@/components/slides/slideConstants";
-import type { Report } from "@/types";
+import { SLIDE_HEIGHT, SLIDE_WIDTH } from "@/components/slides/slideConstants";
 
-export interface PdfExportCallbacks {
-  /** Called before rendering each slide. Return the container element. */
-  onSlide: (slideIndex: number) => Promise<HTMLElement | null>;
-  /** Called when export finishes (success or error). */
-  onDone: () => void;
+export class ExportCancelledError extends Error {
+  constructor() {
+    super("Export cancelled");
+    this.name = "ExportCancelledError";
+  }
 }
 
-export interface PdfExportOptions {
-  /**
-   * Compressed export: same 2x render resolution as the original, but
-   * embedded as JPEG instead of PNG. Much smaller file with visually
-   * identical quality.
-   */
-  compressed?: boolean;
+const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+/**
+ * Resolve once a freshly rendered slide is safe to capture: web fonts are
+ * loaded, every image (the logo) is decoded and the browser has painted.
+ * Charts render synchronously (see FixedChart), so no fixed delay is needed.
+ */
+export async function waitForSlideReady(element: HTMLElement): Promise<void> {
+  if (document.fonts?.ready) {
+    await document.fonts.ready;
+  }
+  await Promise.all(
+    [...element.querySelectorAll("img")].map((img) =>
+      img.complete && img.naturalWidth > 0 ? Promise.resolve() : img.decode().catch(() => undefined),
+    ),
+  );
+  await nextFrame();
+  await nextFrame();
 }
 
-export async function exportReportToPdf(
-  report: Report,
-  callbacks: PdfExportCallbacks,
-  options: PdfExportOptions = {},
-): Promise<void> {
+export interface ImagePdfOptions {
+  slideCount: number;
+  /** Render slide `index` and return its root element. */
+  renderSlide: (index: number) => Promise<HTMLElement | null>;
+  signal?: AbortSignal;
+  onProgress?: (done: number, total: number) => void;
+}
+
+/**
+ * Rasterise each slide with html2canvas and assemble a PDF. Used where a
+ * pixel-exact file is wanted without the browser's print dialog.
+ */
+export async function buildImagePdf(options: ImagePdfOptions): Promise<Blob> {
+  const { slideCount, renderSlide, signal, onProgress } = options;
   const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
     import("html2canvas-pro"),
     import("jspdf"),
   ]);
 
-  if (document.fonts?.ready) {
-    await document.fonts.ready;
-  }
-
   const pdf = new jsPDF({
     orientation: "landscape",
     unit: "px",
     format: [SLIDE_WIDTH, SLIDE_HEIGHT],
+    compress: true,
   });
 
-  const compressed = Boolean(options.compressed);
-  const imageFormat = compressed ? "image/jpeg" : "image/png";
-  const imageKind = compressed ? "JPEG" : "PNG";
-  const quality = compressed ? 0.98 : undefined;
-
-  try {
-    for (let slideIndex = 0; slideIndex < TOTAL_SLIDES; slideIndex += 1) {
-      const slideEl = await callbacks.onSlide(slideIndex);
-      if (!slideEl) continue;
-
-      // Wait for render; slide 0 is a cold mount so needs extra settle time
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-      await new Promise((r) => window.setTimeout(r, slideIndex === 0 ? 600 : 250));
-
-      const canvas = await html2canvas(slideEl, {
-        backgroundColor: "#ffffff",
-        width: SLIDE_WIDTH,
-        height: SLIDE_HEIGHT,
-        scale: 2,
-        useCORS: true,
-      });
-
-      if (slideIndex > 0) {
-        pdf.addPage([SLIDE_WIDTH, SLIDE_HEIGHT], "landscape");
-      }
-      pdf.addImage(canvas.toDataURL(imageFormat, quality), imageKind, 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT);
+  for (let index = 0; index < slideCount; index += 1) {
+    if (signal?.aborted) {
+      throw new ExportCancelledError();
     }
+    onProgress?.(index, slideCount);
 
-    const suffix = compressed ? "-compressed" : "";
-    pdf.save(`${report.quarter}-${report.year}-board-report${suffix}.pdf`);
-  } finally {
-    callbacks.onDone();
+    const slide = await renderSlide(index);
+    if (!slide) {
+      continue;
+    }
+    await waitForSlideReady(slide);
+
+    const canvas = await html2canvas(slide, {
+      backgroundColor: "#ffffff",
+      width: SLIDE_WIDTH,
+      height: SLIDE_HEIGHT,
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+
+    if (index > 0) {
+      pdf.addPage([SLIDE_WIDTH, SLIDE_HEIGHT], "landscape");
+    }
+    // Flat slide graphics compress well as lossless PNG. For small files,
+    // the vector (print) export is the better choice.
+    pdf.addImage(
+      canvas.toDataURL("image/png"),
+      "PNG",
+      0,
+      0,
+      SLIDE_WIDTH,
+      SLIDE_HEIGHT,
+      undefined,
+      "FAST",
+    );
   }
+
+  onProgress?.(slideCount, slideCount);
+  return pdf.output("blob");
 }

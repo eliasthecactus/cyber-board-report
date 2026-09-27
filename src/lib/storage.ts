@@ -1,16 +1,21 @@
 import type { AppSettings, Report } from "@/types";
 import { createId, normalizeReport, reportSortValue } from "@/lib/reportFactory";
 import { normalizeSettings } from "@/lib/settingsDefaults";
+import { IS_DEV_CHANNEL } from "@/lib/channel";
 
-const DB_NAME = "cyber-board-reports-local";
+// Dev and prod share an origin on GitHub Pages, so dev gets its own database.
+const DB_NAME = IS_DEV_CHANNEL ? "cyber-board-reports-local-dev" : "cyber-board-reports-local";
 const DB_VERSION = 1;
 const REPORT_STORE = "reports";
 const SETTINGS_STORE = "settings";
 const PROFILE_KEY = "profile";
 const SETTINGS_KEY = "app-settings";
-const FALLBACK_KEY = "cyber-board-reports:fallback:v1";
-const SETTINGS_FALLBACK_KEY = "cyber-board-reports:settings:v1";
 const SNAPSHOT_VERSION = 1;
+
+// Earlier versions fell back to localStorage when IndexedDB failed. That data
+// is migrated into IndexedDB once on startup and then removed.
+const LEGACY_FALLBACK_KEY = "cyber-board-reports:fallback:v1";
+const LEGACY_SETTINGS_KEY = "cyber-board-reports:settings:v1";
 
 export interface LocalProfile {
   displayName: string;
@@ -26,14 +31,6 @@ export interface AppSnapshot {
   settings: AppSettings;
 }
 
-/** The localStorage fallback only mirrors reports and profile; settings live under their own key. */
-type FallbackSnapshot = Omit<AppSnapshot, "settings">;
-
-interface SettingRecord<T = unknown> {
-  key: string;
-  value: T;
-}
-
 export interface ImportResult {
   reportsImported: number;
   profileImported: boolean;
@@ -46,7 +43,10 @@ export interface SnapshotSelection {
   name: boolean;
   logo: boolean;
   primaryColor: boolean;
+  /** AI model and redaction rules (not the API key). */
   ai: boolean;
+  /** The OpenRouter API key. Off by default: backups are often shared. */
+  apiKey: boolean;
   language: boolean;
 }
 
@@ -57,18 +57,26 @@ export interface SnapshotInfo {
   hasLogo: boolean;
   hasPrimaryColor: boolean;
   hasAi: boolean;
+  hasApiKey: boolean;
   hasLanguage: boolean;
   language: string | null;
+  /** AI settings in the file, shown so the user can review them before import. */
+  aiModel: string | null;
+  redactionKeywords: string[];
 }
 
-export const FULL_SELECTION: SnapshotSelection = {
+/** Everything except the API key. */
+export const DEFAULT_SELECTION: SnapshotSelection = {
   reports: true,
   name: true,
   logo: true,
   primaryColor: true,
   ai: true,
+  apiKey: false,
   language: true,
 };
+
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 function defaultProfile(): LocalProfile {
   return {
@@ -77,20 +85,18 @@ function defaultProfile(): LocalProfile {
   };
 }
 
-function hasIndexedDB(): boolean {
-  return typeof window !== "undefined" && "indexedDB" in window;
-}
+// ── IndexedDB ─────────────────────────────────────────────────────────────
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
 function openDatabase(): Promise<IDBDatabase> {
-  if (!hasIndexedDB()) {
-    return Promise.reject(new Error("IndexedDB is not available"));
+  if (typeof indexedDB === "undefined") {
+    return Promise.reject(new StorageError("unavailable"));
   }
 
   if (!dbPromise) {
-    dbPromise = new Promise((resolve, reject) => {
-      const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+    dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onupgradeneeded = () => {
         const db = request.result;
@@ -103,184 +109,172 @@ function openDatabase(): Promise<IDBDatabase> {
       };
 
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error || new Error("Failed to open IndexedDB"));
-      request.onblocked = () => reject(new Error("IndexedDB upgrade blocked by another tab"));
-    });
+      request.onerror = () => reject(new StorageError("open", request.error));
+      request.onblocked = () => reject(new StorageError("blocked"));
+    })
+      .then(async (db) => {
+        try {
+          // The legacy data belongs to production; dev must not take it.
+          if (!IS_DEV_CHANNEL) await migrateLegacyLocalStorage(db);
+        } catch (error) {
+          // Keep the legacy copy in place and try again on the next start.
+          console.warn("Could not migrate legacy localStorage data.", error);
+        }
+        return db;
+      })
+      .catch((error: unknown) => {
+        // Allow a later call to retry instead of caching the failure forever.
+        dbPromise = null;
+        throw error;
+      });
   }
 
   return dbPromise;
 }
 
-function readFallbackSnapshot(): FallbackSnapshot {
-  const raw = window.localStorage.getItem(FALLBACK_KEY);
-  if (!raw) {
-    return {
-      version: SNAPSHOT_VERSION,
-      exportedAt: new Date().toISOString(),
-      profile: defaultProfile(),
-      reports: [],
-    };
+/** Error with a stable `code` the UI can translate. */
+export class StorageError extends Error {
+  constructor(
+    public readonly code: "unavailable" | "open" | "blocked" | "quota" | "failed",
+    cause?: unknown,
+  ) {
+    super(`Local storage error: ${code}`, { cause });
+    this.name = "StorageError";
   }
+}
 
+function toStorageError(error: unknown): StorageError {
+  if (error instanceof StorageError) {
+    return error;
+  }
+  if (error instanceof DOMException && error.name === "QuotaExceededError") {
+    return new StorageError("quota", error);
+  }
+  return new StorageError("failed", error);
+}
+
+/**
+ * Run `fn` inside one transaction and resolve with the value of the request
+ * it returns once the transaction has committed.
+ */
+async function tx<T>(
+  stores: string | string[],
+  mode: IDBTransactionMode,
+  fn: (transaction: IDBTransaction) => IDBRequest<T> | void,
+): Promise<T> {
+  const db = await openDatabase();
+  return new Promise<T>((resolve, reject) => {
+    let transaction: IDBTransaction;
+    try {
+      transaction = db.transaction(stores, mode);
+    } catch (error) {
+      reject(toStorageError(error));
+      return;
+    }
+    const request = fn(transaction);
+    transaction.oncomplete = () => resolve(request ? request.result : (undefined as T));
+    transaction.onerror = () => reject(toStorageError(transaction.error));
+    transaction.onabort = () => reject(toStorageError(transaction.error));
+  });
+}
+
+async function migrateLegacyLocalStorage(db: IDBDatabase): Promise<void> {
+  let reportsRaw: string | null;
+  let settingsRaw: string | null;
   try {
-    const parsed = JSON.parse(raw) as Partial<FallbackSnapshot>;
-    return {
-      version: Number(parsed.version || SNAPSHOT_VERSION),
-      exportedAt: parsed.exportedAt || new Date().toISOString(),
-      profile: {
-        ...defaultProfile(),
-        ...(parsed.profile || {}),
-      },
-      reports: Array.isArray(parsed.reports)
-        ? parsed.reports.map((report) => normalizeReport(report))
-        : [],
-    };
+    reportsRaw = localStorage.getItem(LEGACY_FALLBACK_KEY);
+    settingsRaw = localStorage.getItem(LEGACY_SETTINGS_KEY);
   } catch {
-    return {
-      version: SNAPSHOT_VERSION,
-      exportedAt: new Date().toISOString(),
-      profile: defaultProfile(),
-      reports: [],
-    };
+    return;
+  }
+  if (!reportsRaw && !settingsRaw) {
+    return;
+  }
+
+  const legacy = safeParse(reportsRaw) as { reports?: unknown; profile?: unknown } | null;
+  const reports = Array.isArray(legacy?.reports) ? legacy.reports : [];
+  const settings = safeParse(settingsRaw);
+
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction([REPORT_STORE, SETTINGS_STORE], "readwrite");
+    const reportStore = transaction.objectStore(REPORT_STORE);
+    const settingStore = transaction.objectStore(SETTINGS_STORE);
+    for (const report of reports) {
+      // `add` never overwrites data that already exists in IndexedDB.
+      reportStore.add(normalizeReport(report)).onerror = (event) => event.preventDefault();
+    }
+    if (isRecord(legacy?.profile)) {
+      settingStore.add({ key: PROFILE_KEY, value: legacy.profile }).onerror = (event) =>
+        event.preventDefault();
+    }
+    if (isRecord(settings)) {
+      settingStore.add({ key: SETTINGS_KEY, value: normalizeSettings(settings) }).onerror = (
+        event,
+      ) => event.preventDefault();
+    }
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+
+  localStorage.removeItem(LEGACY_FALLBACK_KEY);
+  localStorage.removeItem(LEGACY_SETTINGS_KEY);
+}
+
+function safeParse(raw: string | null): unknown {
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
   }
 }
 
-function writeFallbackSnapshot(snapshot: FallbackSnapshot): void {
-  window.localStorage.setItem(FALLBACK_KEY, JSON.stringify(snapshot));
+async function getSetting<T>(key: string): Promise<T | null> {
+  const record = await tx<{ key: string; value: T } | undefined>(SETTINGS_STORE, "readonly", (t) =>
+    t.objectStore(SETTINGS_STORE).get(key),
+  );
+  return record ? record.value : null;
 }
 
-async function idbGetAllReports(): Promise<Report[]> {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const request = db
-      .transaction(REPORT_STORE, "readonly")
-      .objectStore(REPORT_STORE)
-      .getAll();
-
-    request.onsuccess = () => {
-      resolve((request.result as Partial<Report>[]).map((report) => normalizeReport(report)));
-    };
-    request.onerror = () => reject(request.error || new Error("Failed to load reports"));
-  });
+async function putSetting<T>(key: string, value: T): Promise<void> {
+  await tx(SETTINGS_STORE, "readwrite", (t) => t.objectStore(SETTINGS_STORE).put({ key, value }));
 }
 
-async function idbGetReport(id: string): Promise<Report | null> {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const request = db
-      .transaction(REPORT_STORE, "readonly")
-      .objectStore(REPORT_STORE)
-      .get(id);
-
-    request.onsuccess = () => {
-      resolve(request.result ? normalizeReport(request.result as Partial<Report>) : null);
-    };
-    request.onerror = () => reject(request.error || new Error("Failed to load report"));
-  });
+/**
+ * Ask the browser not to evict this origin's data under storage pressure.
+ * Without it, IndexedDB is "best effort" and can be cleared silently.
+ */
+export async function requestPersistentStorage(): Promise<boolean> {
+  if (typeof navigator === "undefined" || !navigator.storage?.persist) {
+    return false;
+  }
+  try {
+    return (await navigator.storage.persisted()) || (await navigator.storage.persist());
+  } catch {
+    return false;
+  }
 }
 
-async function idbSaveReport(report: Report): Promise<void> {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const request = db
-      .transaction(REPORT_STORE, "readwrite")
-      .objectStore(REPORT_STORE)
-      .put(normalizeReport(report));
-
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error || new Error("Failed to save report"));
-  });
-}
-
-async function idbDeleteReport(id: string): Promise<void> {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const request = db
-      .transaction(REPORT_STORE, "readwrite")
-      .objectStore(REPORT_STORE)
-      .delete(id);
-
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error || new Error("Failed to delete report"));
-  });
-}
-
-async function idbGetSetting<T>(key: string): Promise<T | null> {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const request = db
-      .transaction(SETTINGS_STORE, "readonly")
-      .objectStore(SETTINGS_STORE)
-      .get(key);
-
-    request.onsuccess = () => {
-      const record = request.result as SettingRecord<T> | undefined;
-      resolve(record ? record.value : null);
-    };
-    request.onerror = () => reject(request.error || new Error("Failed to load setting"));
-  });
-}
-
-async function idbSaveSetting<T>(key: string, value: T): Promise<void> {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const request = db
-      .transaction(SETTINGS_STORE, "readwrite")
-      .objectStore(SETTINGS_STORE)
-      .put({ key, value } satisfies SettingRecord<T>);
-
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error || new Error("Failed to save setting"));
-  });
-}
-
-async function idbClearAll(): Promise<void> {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction([REPORT_STORE, SETTINGS_STORE], "readwrite");
-    tx.objectStore(REPORT_STORE).clear();
-    tx.objectStore(SETTINGS_STORE).clear();
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error("Failed to clear local data"));
-  });
-}
+// ── Reports ───────────────────────────────────────────────────────────────
 
 function sortReports(reports: Report[]): Report[] {
   return [...reports].sort((a, b) => reportSortValue(b).localeCompare(reportSortValue(a)));
 }
 
-async function useStorage<T>(idbAction: () => Promise<T>, fallbackAction: () => T): Promise<T> {
-  if (!hasIndexedDB()) {
-    return fallbackAction();
-  }
-
-  try {
-    return await idbAction();
-  } catch (error) {
-    console.warn("IndexedDB unavailable, using localStorage fallback.", error);
-    return fallbackAction();
-  }
-}
-
 export async function listReports(): Promise<Report[]> {
-  return useStorage(
-    async () => sortReports(await idbGetAllReports()),
-    () => sortReports(readFallbackSnapshot().reports),
+  const stored = await tx<unknown[]>(REPORT_STORE, "readonly", (t) =>
+    t.objectStore(REPORT_STORE).getAll(),
   );
+  return sortReports(stored.map((report) => normalizeReport(report as Partial<Report>)));
 }
 
 export async function getReport(id: string): Promise<Report | null> {
-  return useStorage(
-    () => idbGetReport(id),
-    () => readFallbackSnapshot().reports.find((report) => report.id === id) || null,
+  const stored = await tx<unknown>(REPORT_STORE, "readonly", (t) =>
+    t.objectStore(REPORT_STORE).get(id),
   );
+  return stored ? normalizeReport(stored as Partial<Report>) : null;
 }
 
 export async function saveReport(report: Report): Promise<Report> {
@@ -288,48 +282,35 @@ export async function saveReport(report: Report): Promise<Report> {
     ...report,
     updatedAt: report.updatedAt || new Date().toISOString(),
   });
-
-  await useStorage(
-    () => idbSaveReport(normalized),
-    () => {
-      const snapshot = readFallbackSnapshot();
-      const reports = snapshot.reports.filter((item) => item.id !== normalized.id);
-      writeFallbackSnapshot({ ...snapshot, reports: [...reports, normalized] });
-    },
-  );
-
+  await tx(REPORT_STORE, "readwrite", (t) => t.objectStore(REPORT_STORE).put(normalized));
   return normalized;
 }
 
 export async function deleteReport(id: string): Promise<void> {
-  await useStorage(
-    () => idbDeleteReport(id),
-    () => {
-      const snapshot = readFallbackSnapshot();
-      writeFallbackSnapshot({
-        ...snapshot,
-        reports: snapshot.reports.filter((report) => report.id !== id),
-      });
-    },
-  );
+  await tx(REPORT_STORE, "readwrite", (t) => t.objectStore(REPORT_STORE).delete(id));
 }
 
+export async function renameReportAuthor(oldName: string, newName: string): Promise<void> {
+  const reports = await listReports();
+  const now = new Date().toISOString();
+  await tx(REPORT_STORE, "readwrite", (t) => {
+    const store = t.objectStore(REPORT_STORE);
+    for (const report of reports) {
+      if (report.createdBy === oldName) {
+        store.put({ ...report, createdBy: newName, updatedAt: now });
+      }
+    }
+  });
+}
+
+// ── Profile & settings ────────────────────────────────────────────────────
+
 export async function getProfile(): Promise<LocalProfile> {
-  const profile = await useStorage(
-    () => idbGetSetting<LocalProfile>(PROFILE_KEY),
-    () => readFallbackSnapshot().profile,
-  );
-
+  const profile = await getSetting<LocalProfile>(PROFILE_KEY);
   if (profile) {
-    return {
-      ...defaultProfile(),
-      ...profile,
-    };
+    return { ...defaultProfile(), ...profile };
   }
-
-  const created = defaultProfile();
-  await saveProfile(created);
-  return created;
+  return saveProfile(defaultProfile());
 }
 
 export async function saveProfile(profile: LocalProfile): Promise<LocalProfile> {
@@ -337,77 +318,37 @@ export async function saveProfile(profile: LocalProfile): Promise<LocalProfile> 
     displayName: profile.displayName.trim() || "Local User",
     updatedAt: new Date().toISOString(),
   };
-
-  await useStorage(
-    () => idbSaveSetting(PROFILE_KEY, normalized),
-    () => {
-      const snapshot = readFallbackSnapshot();
-      writeFallbackSnapshot({ ...snapshot, profile: normalized });
-    },
-  );
-
+  await putSetting(PROFILE_KEY, normalized);
   return normalized;
 }
 
-function readFallbackSettings(): AppSettings {
-  try {
-    const raw = window.localStorage.getItem(SETTINGS_FALLBACK_KEY);
-    return normalizeSettings(raw ? (JSON.parse(raw) as Partial<AppSettings>) : null);
-  } catch {
-    return normalizeSettings(null);
-  }
-}
-
 export async function getSettings(): Promise<AppSettings> {
-  const stored = await useStorage(
-    () => idbGetSetting<AppSettings>(SETTINGS_KEY),
-    () => readFallbackSettings(),
-  );
-  return normalizeSettings(stored);
+  return normalizeSettings(await getSetting<AppSettings>(SETTINGS_KEY));
 }
 
 export async function saveSettings(settings: AppSettings): Promise<AppSettings> {
   const normalized = normalizeSettings({ ...settings, updatedAt: new Date().toISOString() });
-
-  await useStorage(
-    () => idbSaveSetting(SETTINGS_KEY, normalized),
-    () => window.localStorage.setItem(SETTINGS_FALLBACK_KEY, JSON.stringify(normalized)),
-  );
-
+  await putSetting(SETTINGS_KEY, normalized);
   return normalized;
 }
 
-export async function renameReportAuthor(oldName: string, newName: string): Promise<void> {
-  const reports = await listReports();
-  await Promise.all(
-    reports
-      .filter((report) => report.createdBy === oldName)
-      .map((report) =>
-        saveReport({
-          ...report,
-          createdBy: newName,
-          updatedAt: new Date().toISOString(),
-        }),
-      ),
-  );
+export async function clearLocalData(): Promise<void> {
+  await tx([REPORT_STORE, SETTINGS_STORE], "readwrite", (t) => {
+    t.objectStore(REPORT_STORE).clear();
+    t.objectStore(SETTINGS_STORE).clear();
+  });
 }
 
-export async function clearLocalData(): Promise<void> {
-  await useStorage(
-    () => idbClearAll(),
-    () => {
-      window.localStorage.removeItem(FALLBACK_KEY);
-    },
-  );
-  window.localStorage.removeItem(FALLBACK_KEY);
-  window.localStorage.removeItem(SETTINGS_FALLBACK_KEY);
-}
+// ── Backup / import ───────────────────────────────────────────────────────
 
 export async function exportSnapshot(
-  selection: SnapshotSelection = FULL_SELECTION,
+  selection: SnapshotSelection = DEFAULT_SELECTION,
 ): Promise<AppSnapshot> {
-  const fullProfile = await getProfile();
-  const fullSettings = await getSettings();
+  const [fullProfile, fullSettings, reports] = await Promise.all([
+    getProfile(),
+    getSettings(),
+    selection.reports ? listReports() : Promise.resolve([]),
+  ]);
 
   return {
     version: SNAPSHOT_VERSION,
@@ -416,126 +357,106 @@ export async function exportSnapshot(
       displayName: selection.name ? fullProfile.displayName : "",
       updatedAt: fullProfile.updatedAt,
     },
-    reports: selection.reports ? await listReports() : [],
+    reports,
     settings: {
       language: fullSettings.language,
-      openRouterApiKey: selection.ai ? fullSettings.openRouterApiKey : "",
+      openRouterApiKey: selection.apiKey ? fullSettings.openRouterApiKey : "",
       openRouterModel: selection.ai ? fullSettings.openRouterModel : "",
       redactionRules: selection.ai ? fullSettings.redactionRules : [],
       logo: selection.logo ? fullSettings.logo : "",
       primaryColor: selection.primaryColor ? fullSettings.primaryColor : "",
+      lastBackupAt: "",
       updatedAt: fullSettings.updatedAt,
     },
   };
 }
 
+function snapshotParts(payload: unknown) {
+  const candidate = isRecord(payload) ? payload : {};
+  const reports: unknown[] = Array.isArray(candidate.reports)
+    ? candidate.reports
+    : isReportLike(candidate)
+      ? [candidate]
+      : [];
+  const settings = isRecord(candidate.settings) ? (candidate.settings as Partial<AppSettings>) : null;
+  const profile = isRecord(candidate.profile) ? candidate.profile : null;
+  return { reports, settings, profile };
+}
+
 /** Inspect a parsed snapshot/report file and report what it can restore. */
 export function analyzeSnapshot(payload: unknown): SnapshotInfo {
-  const candidate = isRecord(payload)
-    ? (payload as Partial<AppSnapshot> | Partial<Report>)
-    : {};
-  const snapshotCandidate = candidate as Partial<AppSnapshot>;
-  const reports = Array.isArray(snapshotCandidate.reports)
-    ? (snapshotCandidate.reports as Partial<Report>[])
-    : isReportLike(candidate)
-      ? [candidate as Partial<Report>]
-      : [];
-  const settings = isRecord(snapshotCandidate.settings)
-    ? (snapshotCandidate.settings as Partial<AppSettings>)
-    : null;
-  const name = snapshotCandidate.profile?.displayName?.trim() || null;
-
-  const languageValue =
-    settings && (settings.language === "en" || settings.language === "de")
-      ? (settings.language as string)
+  const { reports, settings, profile } = snapshotParts(payload);
+  const name = typeof profile?.displayName === "string" ? profile.displayName.trim() || null : null;
+  const language =
+    settings?.language === "en" || settings?.language === "de" ? settings.language : null;
+  const aiModel =
+    typeof settings?.openRouterModel === "string" && settings.openRouterModel.trim()
+      ? settings.openRouterModel.trim()
       : null;
+  const redactionKeywords = Array.isArray(settings?.redactionRules)
+    ? settings.redactionRules
+        .map((rule) => (isRecord(rule) && typeof rule.keyword === "string" ? rule.keyword : ""))
+        .filter(Boolean)
+    : [];
 
   return {
     reportsCount: reports.length,
     name,
-    hasLogo: Boolean(settings && typeof settings.logo === "string" && settings.logo),
-    hasPrimaryColor: Boolean(
-      settings &&
-        typeof settings.primaryColor === "string" &&
-        /^#[0-9a-fA-F]{6}$/.test(settings.primaryColor),
-    ),
-    hasAi: Boolean(
-      settings &&
-        ((typeof settings.openRouterApiKey === "string" && settings.openRouterApiKey.trim()) ||
-          (typeof settings.openRouterModel === "string" && settings.openRouterModel.trim()) ||
-          (Array.isArray(settings.redactionRules) && settings.redactionRules.length > 0)),
-    ),
-    hasLanguage: languageValue !== null,
-    language: languageValue,
+    hasLogo: typeof settings?.logo === "string" && settings.logo.startsWith("data:image/"),
+    hasPrimaryColor: typeof settings?.primaryColor === "string" && HEX_COLOR.test(settings.primaryColor),
+    hasAi: Boolean(aiModel || redactionKeywords.length),
+    hasApiKey: typeof settings?.openRouterApiKey === "string" && Boolean(settings.openRouterApiKey.trim()),
+    hasLanguage: language !== null,
+    language,
+    aiModel,
+    redactionKeywords,
   };
 }
 
 export async function importSnapshotPayload(
   payload: unknown,
-  selection: SnapshotSelection = FULL_SELECTION,
+  selection: SnapshotSelection,
 ): Promise<ImportResult> {
-  const existing = await listReports();
-  const existingIds = new Set(existing.map((report) => report.id));
+  const { reports, settings: incoming, profile } = snapshotParts(payload);
 
-  const candidate = isRecord(payload)
-    ? (payload as Partial<AppSnapshot> | Partial<Report>)
-    : {};
-  const snapshotCandidate = candidate as Partial<AppSnapshot>;
-  const reports = Array.isArray(snapshotCandidate.reports)
-    ? (snapshotCandidate.reports as Partial<Report>[])
-    : isReportLike(candidate)
-      ? [candidate as Partial<Report>]
-      : [];
-
-  const hasSettings = isRecord(snapshotCandidate.settings);
-
-  // A backup may legitimately omit reports (e.g. a settings-only export, or a
-  // file the user trimmed down). Only reject files with nothing we can restore.
-  if (reports.length === 0 && !hasSettings) {
-    throw new Error("The selected file does not contain report or settings data.");
+  // A backup may legitimately omit reports (e.g. a settings-only export).
+  // Only reject files with nothing we can restore.
+  if (reports.length === 0 && !incoming) {
+    throw new Error("import.nothing");
   }
 
   let imported = 0;
-  if (selection.reports) {
-    for (const reportInput of reports) {
-      const report = normalizeReport(reportInput);
-      const id = existingIds.has(report.id) ? createId() : report.id;
-      existingIds.add(id);
-
-      await saveReport({
-        ...report,
-        id,
-        updatedAt: new Date().toISOString(),
-      });
-      imported += 1;
-    }
+  if (selection.reports && reports.length > 0) {
+    const existingIds = new Set((await listReports()).map((report) => report.id));
+    const now = new Date().toISOString();
+    const toSave = reports.map((reportInput) => {
+      const report = normalizeReport(reportInput as Partial<Report>);
+      const reportId = existingIds.has(report.id) ? createId() : report.id;
+      existingIds.add(reportId);
+      return { ...report, id: reportId, updatedAt: now };
+    });
+    await tx(REPORT_STORE, "readwrite", (t) => {
+      const store = t.objectStore(REPORT_STORE);
+      toSave.forEach((report) => store.put(report));
+    });
+    imported = toSave.length;
   }
 
-  const incomingProfile = snapshotCandidate.profile;
   let profileImported = false;
-  if (selection.name && incomingProfile?.displayName) {
-    await saveProfile({
-      displayName: incomingProfile.displayName,
-      updatedAt: new Date().toISOString(),
-    });
+  if (selection.name && typeof profile?.displayName === "string" && profile.displayName.trim()) {
+    await saveProfile({ displayName: profile.displayName, updatedAt: new Date().toISOString() });
     profileImported = true;
   }
 
   // Restore only the selected settings fields. Fields that are absent or blank
-  // (e.g. an API key the user deliberately stripped before sharing) are left
-  // untouched rather than wiping the current value.
+  // (e.g. an API key stripped before sharing) leave the current value alone.
   let settingsImported = false;
-  if (hasSettings) {
-    const incoming = snapshotCandidate.settings as Partial<AppSettings>;
-    const current = await getSettings();
+  if (incoming) {
     const patch: Partial<AppSettings> = {};
     if (selection.language && (incoming.language === "en" || incoming.language === "de")) {
       patch.language = incoming.language;
     }
     if (selection.ai) {
-      if (typeof incoming.openRouterApiKey === "string" && incoming.openRouterApiKey.trim()) {
-        patch.openRouterApiKey = incoming.openRouterApiKey;
-      }
       if (typeof incoming.openRouterModel === "string" && incoming.openRouterModel.trim()) {
         patch.openRouterModel = incoming.openRouterModel;
       }
@@ -543,36 +464,34 @@ export async function importSnapshotPayload(
         patch.redactionRules = incoming.redactionRules;
       }
     }
-    if (selection.logo && typeof incoming.logo === "string" && incoming.logo) {
+    if (
+      selection.apiKey &&
+      typeof incoming.openRouterApiKey === "string" &&
+      incoming.openRouterApiKey.trim()
+    ) {
+      patch.openRouterApiKey = incoming.openRouterApiKey;
+    }
+    if (selection.logo && typeof incoming.logo === "string" && incoming.logo.startsWith("data:image/")) {
       patch.logo = incoming.logo;
     }
     if (
       selection.primaryColor &&
       typeof incoming.primaryColor === "string" &&
-      /^#[0-9a-fA-F]{6}$/.test(incoming.primaryColor)
+      HEX_COLOR.test(incoming.primaryColor)
     ) {
       patch.primaryColor = incoming.primaryColor;
     }
     if (Object.keys(patch).length > 0) {
-      await saveSettings(normalizeSettings({ ...current, ...patch }));
+      await saveSettings(normalizeSettings({ ...(await getSettings()), ...patch }));
       settingsImported = true;
     }
   }
 
-  return {
-    reportsImported: imported,
-    profileImported,
-    settingsImported,
-  };
+  return { reportsImported: imported, profileImported, settingsImported };
 }
 
-function isReportLike(value: Partial<AppSnapshot> | Partial<Report>): value is Partial<Report> {
-  return Boolean(
-    value &&
-      typeof value === "object" &&
-      "quarter" in value &&
-      "year" in value,
-  );
+function isReportLike(value: Record<string, unknown>): boolean {
+  return "quarter" in value && "year" in value;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

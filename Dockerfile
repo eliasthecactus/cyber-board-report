@@ -4,7 +4,9 @@ FROM node:24-alpine AS dependencies
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# Playwright browsers are only needed for e2e tests, not for the build.
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+RUN npm ci --no-audit --no-fund
 
 FROM dependencies AS build
 WORKDIR /app

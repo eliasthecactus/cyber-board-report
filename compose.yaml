@@ -6,3 +6,12 @@ services:
     ports:
       - "8080:8080"
     restart: unless-stopped
+    # The container only serves static files, so lock it down.
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

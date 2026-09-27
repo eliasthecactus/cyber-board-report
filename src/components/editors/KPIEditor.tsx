@@ -1,27 +1,20 @@
-import { KPI, TrendDirection } from "@/types";
-import { createId } from "@/lib/reportFactory";
-import { useState } from "react";
+import { useId, useState } from "react";
+import { Trash2, X } from "lucide-react";
+import type { KPI, TrendDirection } from "@/types";
+import { createId, periodLabel } from "@/lib/reportFactory";
 import { useT } from "@/lib/i18n";
-import { X } from "lucide-react";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 interface KPIEditorProps {
   data: KPI[];
   onUpdate: (data: KPI[]) => void;
-  // current open report quarter (e.g. "Q1") and year to prevent adding duplicate historical points
-  reportQuarter?: string;
-  reportYear?: number;
+  /** The open report's quarter ("Q1") and year: its value is the KPI's current value. */
+  reportQuarter: string;
+  reportYear: number;
 }
 
 export default function KPIEditor({ data, onUpdate, reportQuarter, reportYear }: KPIEditorProps) {
   const t = useT();
-  const currentYear = new Date().getFullYear();
-  const quarters = [1, 2, 3, 4];
-  const years = Array.from({ length: currentYear - 1999 }, (_, i) => 2000 + i);
-
-  const kpisData = data || [];
-
-  const [warningStates, setWarningStates] = useState<{ [key: string]: boolean }>({});
-  const [duplicateStates, setDuplicateStates] = useState<{ [key: string]: boolean }>({});
 
   const addKPI = () => {
     const newKPI: KPI = {
@@ -30,161 +23,279 @@ export default function KPIEditor({ data, onUpdate, reportQuarter, reportYear }:
       unit: "",
       value: 0,
       trend: "stable",
+      direction: "higher",
       historicalData: [],
     };
-    onUpdate([...kpisData, newKPI]);
+    onUpdate([...data, newKPI]);
   };
 
   const updateKPI = (id: string, updates: Partial<KPI>) => {
-    onUpdate(kpisData.map((kpi) => (kpi.id === id ? { ...kpi, ...updates } : kpi)));
+    onUpdate(data.map((kpi) => (kpi.id === id ? { ...kpi, ...updates } : kpi)));
   };
 
   const deleteKPI = (id: string) => {
-    onUpdate(kpisData.filter((kpi) => kpi.id !== id));
+    onUpdate(data.filter((kpi) => kpi.id !== id));
   };
 
-  const formatQuarter = (quarter: number, year: number) => {
-    return `Q${quarter}-${year}`;
-  };
-
-  const handleYearChange = (kpiId: string, year: number) => {
-    const yearsOld = currentYear - year;
-    setWarningStates({ ...warningStates, [kpiId]: yearsOld > 2 });
-  };
   return (
     <div>
       <h2 className="text-lg font-semibold text-slate-900">{t("ed.kpi.title")}</h2>
       <p className="text-sm text-slate-500 mb-5">{t("ed.kpi.desc")}</p>
 
       <div className="flex flex-col gap-6 mb-4">
-        {kpisData.map((kpi) => (
-          <div key={kpi.id} className="rounded-lg border border-slate-200 bg-slate-50 p-5">
-            <div className="mb-3">
-              <input
-                type="text"
-                placeholder={t("ed.kpi.namePlaceholder")}
-                value={kpi.name}
-                onChange={(e) => updateKPI(kpi.id, { name: e.target.value })}
-                className="form-input font-semibold w-full"
-              />
-            </div>
-
-            <div className="flex gap-3 items-end mb-4 flex-wrap">
-              <input
-                type="text"
-                placeholder={t("ed.kpi.unitField")}
-                value={kpi.unit}
-                onChange={(e) => updateKPI(kpi.id, { unit: e.target.value })}
-                className="form-input form-input-sm w-28"
-              />
-              <input
-                type="number"
-                placeholder={t("ed.kpi.currentValue")}
-                value={kpi.value}
-                onChange={(e) => updateKPI(kpi.id, { value: parseFloat(e.target.value) })}
-                className="form-input form-input-sm w-24"
-              />
-              <select
-                value={kpi.trend}
-                onChange={(e) => updateKPI(kpi.id, { trend: e.target.value as TrendDirection })}
-                className="form-input form-input-sm w-24"
-              >
-                <option value="up">{t("ed.kpi.up")}</option>
-                <option value="stable">{t("ed.kpi.stable")}</option>
-                <option value="down">{t("ed.kpi.down")}</option>
-              </select>
-              <input
-                type="number"
-                placeholder={t("ed.kpi.target")}
-                value={kpi.targetValue || ""}
-                onChange={(e) => updateKPI(kpi.id, { targetValue: parseFloat(e.target.value) || undefined })}
-                className="form-input form-input-sm w-20"
-              />
-              <select
-                value={kpi.direction || "higher"}
-                onChange={(e) => updateKPI(kpi.id, { direction: e.target.value as "higher" | "lower" })}
-                className="form-input form-input-sm w-28"
-                title={t("ed.kpi.higherLowerTitle")}
-              >
-                <option value="higher">{t("ed.kpi.higherBetter")}</option>
-                <option value="lower">{t("ed.kpi.lowerBetter")}</option>
-              </select>
-              <button onClick={() => deleteKPI(kpi.id)} className="cbr-btn cbr-btn-danger cbr-btn-sm">
-                {t("common.delete")}
-              </button>
-            </div>
-
-            <div className="border-t border-slate-200 pt-4">
-              <p className="text-xs font-semibold text-slate-500 mb-3">{t("ed.kpi.historical")}</p>
-
-              {kpi.historicalData && kpi.historicalData.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {kpi.historicalData.map((hist, idx) => (
-                    <div key={idx} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white">
-                      <span>{hist.quarter}: {hist.value}</span>
-                      <button onClick={() => updateKPI(kpi.id, { historicalData: kpi.historicalData!.filter((_, i) => i !== idx) })} className="rounded hover:bg-white/20 p-0.5">
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex gap-2 items-end flex-wrap">
-                <div className="flex-1 min-w-fit">
-                  <label className="mb-1 block text-xs font-medium text-slate-500">{t("ed.kpi.quarter")}</label>
-                  <select id={`quarter-sel-${kpi.id}`} defaultValue="1" className="form-input form-input-sm">
-                    {quarters.map((q) => <option key={q} value={q}>Q{q}</option>)}
-                  </select>
-                </div>
-
-                <div className="flex-1 min-w-fit">
-                  <label className="mb-1 block text-xs font-medium text-slate-500">{t("ed.kpi.year")}</label>
-                  <select id={`year-sel-${kpi.id}`} defaultValue={currentYear} onChange={(e) => handleYearChange(kpi.id, parseInt(e.target.value))} className="form-input form-input-sm">
-                    {years.map((y) => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                </div>
-
-                <div className="flex-1 min-w-fit">
-                  <label className="mb-1 block text-xs font-medium text-slate-500">{t("ed.kpi.value2")}</label>
-                  <input type="number" placeholder={t("ed.kpi.valuePlaceholder")} id={`value-${kpi.id}`} className="form-input form-input-sm" />
-                </div>
-
-                <button onClick={() => {
-                  const quarterSel = document.getElementById(`quarter-sel-${kpi.id}`) as HTMLSelectElement;
-                  const yearSel = document.getElementById(`year-sel-${kpi.id}`) as HTMLSelectElement;
-                  const valueInput = document.getElementById(`value-${kpi.id}`) as HTMLInputElement;
-                  if (quarterSel.value && yearSel.value && valueInput.value) {
-                    const quarter = parseInt(quarterSel.value);
-                    const year = parseInt(yearSel.value);
-                    const value = parseFloat(valueInput.value);
-                    const newQuarterLabel = formatQuarter(quarter, year);
-                    const currentLabel = reportQuarter && reportYear ? `${reportQuarter}-${reportYear}` : null;
-                    if (currentLabel && newQuarterLabel === currentLabel) {
-                      setDuplicateStates({ ...duplicateStates, [kpi.id]: true });
-                      setTimeout(() => setDuplicateStates((s) => ({ ...s, [kpi.id]: false })), 2500);
-                      return;
-                    }
-                    const newHist = [...(kpi.historicalData || []), { quarter: newQuarterLabel, value }];
-                    updateKPI(kpi.id, { historicalData: newHist });
-                    quarterSel.value = "1";
-                    yearSel.value = String(currentYear);
-                    valueInput.value = "";
-                  }
-                }} className="cbr-btn cbr-btn-primary cbr-btn-sm">{t("ed.kpi.addDataPoint")}</button>
-              </div>
-
-              {warningStates[kpi.id] && <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{t("ed.kpi.oldData")}</div>}
-              {duplicateStates[kpi.id] && <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{t("ed.kpi.duplicatePoint") || "Cannot add data for the open report quarter."}</div>}
-            </div>
-          </div>
+        {data.map((kpi) => (
+          <KpiCard
+            key={kpi.id}
+            kpi={kpi}
+            currentPeriod={periodLabel(reportQuarter, reportYear)}
+            onChange={(updates) => updateKPI(kpi.id, updates)}
+            onDelete={() => deleteKPI(kpi.id)}
+          />
         ))}
       </div>
 
-      <button onClick={addKPI} className="cbr-btn cbr-btn-primary mt-4">{t("ed.kpi.add")}</button>
+      <button onClick={addKPI} className="cbr-btn cbr-btn-primary mt-4">
+        {t("ed.kpi.add")}
+      </button>
 
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 mt-5">{t("ed.kpi.tip")}</div>
     </div>
   );
 }
 
+interface KpiCardProps {
+  kpi: KPI;
+  currentPeriod: string;
+  onChange: (updates: Partial<KPI>) => void;
+  onDelete: () => void;
+}
+
+function KpiCard({ kpi, currentPeriod, onChange, onDelete }: KpiCardProps) {
+  const t = useT();
+  const id = useId();
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+      <div className="mb-3 flex items-center gap-3">
+        <input
+          type="text"
+          aria-label={t("ed.kpi.nameLabel")}
+          placeholder={t("ed.kpi.namePlaceholder")}
+          value={kpi.name}
+          onChange={(e) => onChange({ name: e.target.value })}
+          className="form-input font-semibold flex-1"
+        />
+        <button
+          onClick={onDelete}
+          className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon shrink-0 text-red-500"
+          aria-label={t("ed.kpi.delete", { name: kpi.name || t("ed.kpi.untitled") })}
+          title={t("common.delete")}
+        >
+          <Trash2 size={15} aria-hidden />
+        </button>
+      </div>
+
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">{t("ed.kpi.unitField")}</span>
+          <input
+            type="text"
+            value={kpi.unit}
+            onChange={(e) => onChange({ unit: e.target.value })}
+            className="form-input form-input-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">{t("ed.kpi.currentValue")}</span>
+          <NumberInput
+            value={kpi.value}
+            onValueChange={(value) => onChange({ value: value ?? 0 })}
+            className="form-input form-input-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">{t("ed.kpi.trendLabel")}</span>
+          <select
+            value={kpi.trend}
+            onChange={(e) => onChange({ trend: e.target.value as TrendDirection })}
+            className="form-input form-input-sm"
+          >
+            <option value="up">{t("ed.kpi.up")}</option>
+            <option value="stable">{t("ed.kpi.stable")}</option>
+            <option value="down">{t("ed.kpi.down")}</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">{t("ed.kpi.target")}</span>
+          <NumberInput
+            value={kpi.targetValue}
+            onValueChange={(value) => onChange({ targetValue: value })}
+            className="form-input form-input-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">{t("ed.kpi.higherLowerTitle")}</span>
+          <select
+            value={kpi.direction || "higher"}
+            onChange={(e) => onChange({ direction: e.target.value as "higher" | "lower" })}
+            className="form-input form-input-sm"
+          >
+            <option value="higher">{t("ed.kpi.higherBetter")}</option>
+            <option value="lower">{t("ed.kpi.lowerBetter")}</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="border-t border-slate-200 pt-4">
+        <p id={`${id}-history`} className="text-xs font-semibold text-slate-500 mb-3">
+          {t("ed.kpi.historical")}
+        </p>
+
+        {kpi.historicalData.length > 0 && (
+          <ul className="flex flex-wrap gap-2 mb-4" aria-labelledby={`${id}-history`}>
+            {kpi.historicalData.map((hist) => (
+              <li
+                key={hist.quarter}
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground"
+              >
+                <span>
+                  {hist.quarter}: {hist.value}
+                </span>
+                <button
+                  onClick={() =>
+                    onChange({ historicalData: kpi.historicalData.filter((h) => h.quarter !== hist.quarter) })
+                  }
+                  className="rounded hover:bg-white/20 p-0.5"
+                  aria-label={t("ed.kpi.removePoint", { period: hist.quarter })}
+                >
+                  <X size={12} aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <HistoryForm
+          existing={kpi.historicalData.map((h) => h.quarter)}
+          currentPeriod={currentPeriod}
+          onAdd={(quarter, value) =>
+            onChange({ historicalData: [...kpi.historicalData, { quarter, value }] })
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+interface HistoryFormProps {
+  existing: string[];
+  currentPeriod: string;
+  onAdd: (quarter: string, value: number) => void;
+}
+
+function HistoryForm({ existing, currentPeriod, onAdd }: HistoryFormProps) {
+  const t = useT();
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 1999 }, (_, i) => currentYear - i);
+  const [quarter, setQuarter] = useState(1);
+  const [year, setYear] = useState(currentYear);
+  const [value, setValue] = useState<number | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
+  // Remounts the value field after adding, which clears it even while focused.
+  const [resetKey, setResetKey] = useState(0);
+
+  const period = periodLabel(quarter, year);
+  const tooOld = currentYear - year > 2;
+
+  const add = () => {
+    if (value === undefined) {
+      return;
+    }
+    if (period === currentPeriod) {
+      setError(t("ed.kpi.duplicatePoint"));
+      return;
+    }
+    if (existing.includes(period)) {
+      setError(t("ed.kpi.periodExists", { period }));
+      return;
+    }
+    onAdd(period, value);
+    setValue(undefined);
+    setResetKey((key) => key + 1);
+    setError(null);
+  };
+
+  return (
+    <>
+      <div className="flex gap-2 items-end flex-wrap">
+        <label className="flex-1 min-w-fit">
+          <span className="mb-1 block text-xs font-medium text-slate-500">{t("ed.kpi.quarter")}</span>
+          <select
+            value={quarter}
+            onChange={(e) => {
+              setQuarter(Number(e.target.value));
+              setError(null);
+            }}
+            className="form-input form-input-sm"
+          >
+            {[1, 2, 3, 4].map((q) => (
+              <option key={q} value={q}>
+                Q{q}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex-1 min-w-fit">
+          <span className="mb-1 block text-xs font-medium text-slate-500">{t("ed.kpi.year")}</span>
+          <select
+            value={year}
+            onChange={(e) => {
+              setYear(Number(e.target.value));
+              setError(null);
+            }}
+            className="form-input form-input-sm"
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex-1 min-w-fit">
+          <span className="mb-1 block text-xs font-medium text-slate-500">{t("ed.kpi.value2")}</span>
+          <NumberInput
+            key={resetKey}
+            value={value}
+            onValueChange={setValue}
+            placeholder={t("ed.kpi.valuePlaceholder")}
+            className="form-input form-input-sm"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                add();
+              }
+            }}
+          />
+        </label>
+
+        <button onClick={add} disabled={value === undefined} className="cbr-btn cbr-btn-primary cbr-btn-sm">
+          {t("ed.kpi.addDataPoint")}
+        </button>
+      </div>
+
+      {tooOld && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          {t("ed.kpi.oldData")}
+        </div>
+      )}
+      {error && (
+        <div role="alert" className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+          {error}
+        </div>
+      )}
+    </>
+  );
+}

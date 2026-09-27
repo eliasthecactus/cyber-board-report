@@ -2,7 +2,8 @@ import { ArrowDownRight, ArrowUpRight, Minus, Plus, Trash2 } from "lucide-react"
 import type { DomainTrend } from "@/types";
 import { createId } from "@/lib/reportFactory";
 import { AiTextarea } from "@/components/ui/AiTextarea";
-import { useT } from "@/lib/i18n";
+import { palette } from "@/components/slides/palette";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 export interface ListItem {
   id: string;
@@ -15,14 +16,14 @@ interface ItemListEditorProps<T extends ListItem> {
   data: T[];
   onUpdate: (data: T[]) => void;
   idPrefix: string;
-  titleKey: string;
-  descKey: string;
-  placeholderKey: string;
-  detailPlaceholderKey: string;
-  addKey: string;
-  emptyKey: string;
-  tipKey?: string;
-  aiLabelKey: string;
+  titleKey: MessageKey;
+  descKey: MessageKey;
+  placeholderKey: MessageKey;
+  detailPlaceholderKey: MessageKey;
+  addKey: MessageKey;
+  emptyKey: MessageKey;
+  tipKey?: MessageKey;
+  aiLabelKey: MessageKey;
 }
 
 const trendIcon: Record<DomainTrend, typeof Minus> = {
@@ -31,8 +32,6 @@ const trendIcon: Record<DomainTrend, typeof Minus> = {
   less: ArrowDownRight,
 };
 
-// Neutral color: the arrow conveys direction; we don't imply good vs. bad.
-const TREND_COLOR = "#64748b";
 
 export default function ItemListEditor<T extends ListItem>({
   data,
@@ -77,7 +76,8 @@ export default function ItemListEditor<T extends ListItem>({
                 <div className="mb-2 flex items-center gap-2.5">
                   <span
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white"
-                    style={{ color: TREND_COLOR }}
+                    style={{ color: palette.muted }}
+                    aria-hidden
                   >
                     <TrendIcon size={16} />
                   </span>
@@ -86,6 +86,7 @@ export default function ItemListEditor<T extends ListItem>({
                     value={item.text}
                     onChange={(e) => updateItem(item.id, { text: e.target.value })}
                     placeholder={t(placeholderKey)}
+                    aria-label={t("ed.item.headline")}
                     className="form-input min-w-0 flex-1 font-semibold"
                   />
                   <div className="w-36 shrink-0">
@@ -95,6 +96,7 @@ export default function ItemListEditor<T extends ListItem>({
                         updateItem(item.id, { trend: e.target.value as DomainTrend })
                       }
                       className="form-input form-input-sm"
+                      aria-label={t("ed.item.trend")}
                     >
                       <option value="more">{t("trend.more")}</option>
                       <option value="stable">{t("trend.stable")}</option>
@@ -104,9 +106,10 @@ export default function ItemListEditor<T extends ListItem>({
                   <button
                     onClick={() => removeItem(item.id)}
                     className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon shrink-0 text-red-500"
-                    aria-label={t("common.remove")}
+                    aria-label={t("ed.item.remove", { name: item.text || t("ed.item.untitled") })}
+                    title={t("common.remove")}
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={15} aria-hidden />
                   </button>
                 </div>
                 <div className="pl-[38px]">
@@ -116,6 +119,7 @@ export default function ItemListEditor<T extends ListItem>({
                     aiLabel={t(aiLabelKey)}
                     aiContext={item.text}
                     placeholder={t(detailPlaceholderKey)}
+                    aria-label={t("ed.item.detail")}
                     rows={2}
                   />
                 </div>
@@ -126,7 +130,7 @@ export default function ItemListEditor<T extends ListItem>({
       )}
 
       <button onClick={addItem} className="cbr-btn cbr-btn-primary cbr-btn-sm">
-        <Plus size={16} className="mr-1" />
+        <Plus size={16} aria-hidden />
         {t(addKey)}
       </button>
 
