@@ -31,6 +31,9 @@ export function serializeReportForAi(report: Report): string {
   const parts: string[] = [];
   parts.push(`Report: ${report.quarter} ${report.year}`);
 
+  if (report.executiveSummaryHighlight) {
+    parts.push(`Key takeaway: ${report.executiveSummaryHighlight}`);
+  }
   if (report.executiveSummary) {
     parts.push(`Executive summary: ${report.executiveSummary}`);
   }
@@ -91,6 +94,11 @@ export function serializeReportForAi(report: Report): string {
   }
   if (report.outlook) {
     parts.push(`Outlook: ${report.outlook}`);
+  }
+  if (report.emergingRisks.length) {
+    parts.push(
+      `Emerging risks:\n${joinList(report.emergingRisks.map((r) => `${r.description} (impact: ${r.impact})`))}`,
+    );
   }
   if (report.decisionsRequired.length) {
     parts.push(

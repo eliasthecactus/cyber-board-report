@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 
 /* ── Corporate design tokens ─────────────────────────────────────────────── */
 
@@ -142,13 +141,18 @@ textarea.form-input {
   cursor: pointer;
   border: 1px solid transparent;
 }
+.cbr-btn:focus-visible,
+.form-input:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
 .cbr-btn:disabled {
   opacity: 0.5;
   pointer-events: none;
 }
 .cbr-btn-primary {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-foreground);
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.06);
 }
 .cbr-btn-primary:hover {
@@ -200,4 +204,66 @@ textarea.form-input {
   padding: 0.375rem;
   width: 2rem;
   height: 2rem;
+}
+
+/* ── Screen-reader only ───────────────────────────────────────────────────── */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Vector PDF export (browser print) ────────────────────────────────────── */
+
+/* Laid out off-screen (not display:none) so charts can measure themselves. */
+.print-root {
+  position: fixed;
+  top: 0;
+  left: -100000px;
+  pointer-events: none;
+}
+
+.print-slide {
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+}
+
+@media print {
+  @page {
+    size: 1280px 720px;
+    margin: 0;
+  }
+
+  html.printing-slides,
+  html.printing-slides body {
+    min-width: 0;
+    min-height: 0;
+    background: white;
+  }
+
+  html.printing-slides body > :not(.print-root) {
+    display: none !important;
+  }
+
+  html.printing-slides .print-root {
+    position: static;
+  }
+
+  html.printing-slides .print-slide {
+    break-after: page;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  html.printing-slides .print-slide:last-child {
+    break-after: auto;
+  }
 }

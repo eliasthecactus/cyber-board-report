@@ -9,12 +9,15 @@ import {
   type ReactNode,
 } from "react";
 import type { AppSettings } from "@/types";
-import { defaultSettings } from "@/lib/settingsDefaults";
+import { DEFAULT_PRIMARY_COLOR, defaultSettings } from "@/lib/settingsDefaults";
+import { darken, readableOn } from "@/lib/color";
 import { getSettings, saveSettings } from "@/lib/storage";
 
 interface SettingsContextValue {
   settings: AppSettings;
   loading: boolean;
+  /** Set when browser storage could not be opened (e.g. blocked site data). */
+  storageError: unknown;
   /** Persist a partial update and merge it into the current settings. */
   update: (patch: Partial<AppSettings>) => Promise<void>;
   /** Re-read settings from storage (e.g. after importing a backup). */
@@ -26,16 +29,24 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
+  const [storageError, setStorageError] = useState<unknown>(null);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const stored = await getSettings();
-      if (!cancelled) {
-        setSettings(stored);
-        setLoading(false);
+      try {
+        const stored = await getSettings();
+        if (!cancelled) {
+          settingsRef.current = stored;
+          setSettings(stored);
+        }
+      } catch (error) {
+        console.error("Could not open browser storage:", error);
+        if (!cancelled) setStorageError(error);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
@@ -48,18 +59,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = settings.language;
   }, [settings.language]);
 
-  // Apply primary color as CSS custom properties.
+  // Apply primary color as CSS custom properties, with a text colour that
+  // stays readable on it and a darker hover shade.
   useEffect(() => {
     const root = document.documentElement;
-    const color = settings.primaryColor || "#1e3a5f";
+    const color = settings.primaryColor || DEFAULT_PRIMARY_COLOR;
     root.style.setProperty("--color-primary", color);
     root.style.setProperty("--color-ring", color);
-    // Derive a darker hover shade by mixing with black.
-    const r = parseInt(color.slice(1, 3), 16);
-    const g = parseInt(color.slice(3, 5), 16);
-    const b = parseInt(color.slice(5, 7), 16);
-    const darken = (v: number) => Math.round(v * 0.78).toString(16).padStart(2, "0");
-    root.style.setProperty("--color-primary-hover", `#${darken(r)}${darken(g)}${darken(b)}`);
+    root.style.setProperty("--color-primary-foreground", readableOn(color));
+    root.style.setProperty("--color-primary-hover", darken(color, 0.22));
   }, [settings.primaryColor]);
 
   const update = useCallback(async (patch: Partial<AppSettings>) => {
@@ -67,8 +75,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     settingsRef.current = next;
     setSettings(next); // optimistic update so the UI feels instant
     const saved = await saveSettings(next);
-    settingsRef.current = saved;
-    setSettings(saved);
+    // A newer update may have started while this one was saving (fast
+    // typing); don't let the older result overwrite it.
+    if (settingsRef.current === next) {
+      settingsRef.current = saved;
+      setSettings(saved);
+    }
   }, []);
 
   const reload = useCallback(async () => {
@@ -78,8 +90,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ settings, loading, update, reload }),
-    [settings, loading, update, reload],
+    () => ({ settings, loading, storageError, update, reload }),
+    [settings, loading, storageError, update, reload],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

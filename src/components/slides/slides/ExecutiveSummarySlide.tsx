@@ -1,8 +1,8 @@
-import { Report } from "@/types";
+import type { Report } from "@/types";
 import { FileText } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { SlideFrame } from "../SlideFrame";
-import { usePrimaryColor } from "../slideConstants";
+import { useAccent } from "../slideConstants";
 
 interface ExecutiveSummarySlideProps {
   report: Report;
@@ -10,20 +10,15 @@ interface ExecutiveSummarySlideProps {
 
 export default function ExecutiveSummarySlide({ report }: ExecutiveSummarySlideProps) {
   const t = useT();
-  const accent = usePrimaryColor();
+  const accent = useAccent();
   return (
-    <SlideFrame
-      report={report}
-      accent={accent}
-      title={t("section.executiveSummary")}
-      icon={FileText}
-    >
+    <SlideFrame report={report} title={t("section.executiveSummary")} icon={FileText}>
       <div className="flex h-full flex-col gap-5">
         {report.executiveSummaryHighlight && (
           <div className="rounded-lg bg-slate-50 p-5">
             <h3
               className="m-0 mb-1 text-[13px] font-bold uppercase tracking-wider"
-              style={{ color: accent }}
+              style={{ color: accent.text }}
             >
               {t("slide.exec.keyTakeaway")}
             </h3>

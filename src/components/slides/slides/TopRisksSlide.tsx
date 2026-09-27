@@ -1,46 +1,31 @@
-import { Report } from "@/types";
+import type { Level, Report, Risk } from "@/types";
 import { AlertTriangle, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { SlideFrame } from "../SlideFrame";
-import { usePrimaryColor } from "../slideConstants";
+import { SLIDE_LIMITS } from "../slideConstants";
+import { matrixCell, matrixTone, riskStatColor, riskTrendColor } from "../palette";
 
 interface TopRisksSlideProps {
   report: Report;
 }
 
-const riskLevels: Record<string, Record<string, string>> = {
-  low: { low: "green", medium: "yellow", high: "orange", critical: "red" },
-  medium: { low: "yellow", medium: "orange", high: "red", critical: "red" },
-  high: { low: "orange", medium: "red", high: "red", critical: "red" },
-  critical: { low: "red", medium: "red", high: "red", critical: "red" },
-};
+const severityRank: Record<Level, number> = { low: 1, medium: 2, high: 3, critical: 4 };
 
-const cellColor: Record<string, string> = {
-  green: "bg-emerald-50 text-emerald-800",
-  yellow: "bg-amber-50 text-amber-800",
-  orange: "bg-orange-50 text-orange-800",
-  red: "bg-red-50 text-red-800",
-  gray: "bg-slate-50 text-slate-800",
-};
+export function riskScore(risk: Risk): number {
+  return severityRank[risk.likelihood] + severityRank[risk.businessImpact];
+}
 
-const severityRank: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+/** Highest-severity risks first, always filled up to the slide's capacity. */
+export function risksForSlide(report: Report): Risk[] {
+  const max = report.showRiskMatrix ? SLIDE_LIMITS.risksWithMatrix : SLIDE_LIMITS.risksWithoutMatrix;
+  return [...report.topRisks].sort((a, b) => riskScore(b) - riskScore(a)).slice(0, max);
+}
+
+export const LEVELS: Level[] = ["low", "medium", "high", "critical"];
 
 export default function TopRisksSlide({ report }: TopRisksSlideProps) {
   const t = useT();
-  const accent = usePrimaryColor();
-
-  const getRiskColor = (likelihood: string, impact: string) =>
-    riskLevels[likelihood]?.[impact] || "gray";
-
-  // Show the highest-severity risks first, but always fill up to the limit
-  // instead of dropping non-critical risks. With the matrix hidden the list is
-  // a two-column grid, so it has room for more.
-  const maxRisks = report.showRiskMatrix ? 4 : 6;
-  const riskScore = (r: { likelihood: string; businessImpact: string }) =>
-    (severityRank[r.likelihood] || 0) + (severityRank[r.businessImpact] || 0);
-  const shownRisks = [...report.topRisks]
-    .sort((a, b) => riskScore(b) - riskScore(a))
-    .slice(0, maxRisks);
+  const shownRisks = risksForSlide(report);
 
   const criticalCount = report.topRisks.filter(
     (r) => r.likelihood === "critical" || r.businessImpact === "critical",
@@ -54,16 +39,14 @@ export default function TopRisksSlide({ report }: TopRisksSlideProps) {
     t("slide.risks.mHigh"),
     t("slide.risks.mCrit"),
   ];
-  const levels = ["low", "medium", "high", "critical"];
-
   const stats = [
-    { label: t("slide.risks.critical"), value: criticalCount, color: "#9f1239" },
-    { label: t("slide.risks.worsening"), value: worseningCount, color: "#9a3412" },
-    { label: t("slide.risks.improving"), value: improvingCount, color: "#065f46" },
+    { label: t("slide.risks.critical"), value: criticalCount, color: riskStatColor.critical },
+    { label: t("slide.risks.worsening"), value: worseningCount, color: riskStatColor.worsening },
+    { label: t("slide.risks.improving"), value: improvingCount, color: riskStatColor.improving },
   ];
 
   return (
-    <SlideFrame report={report} accent={accent} title={t("section.topRisks")} icon={AlertTriangle}>
+    <SlideFrame report={report} title={t("section.topRisks")} icon={AlertTriangle}>
       {report.topRisks.length === 0 ? (
         <p className="text-[15px] italic text-slate-400">{t("slide.risks.none")}</p>
       ) : (
@@ -92,7 +75,7 @@ export default function TopRisksSlide({ report }: TopRisksSlideProps) {
               </h3>
               {shownRisks.map((risk) => {
                 const TrendIcon = risk.trend === "worsening" ? ArrowUp : risk.trend === "stable" ? Minus : ArrowDown;
-                const trendColor = risk.trend === "worsening" ? "#dc2626" : risk.trend === "improving" ? "#059669" : "#94a3b8";
+                const trendColor = riskTrendColor[risk.trend];
                 return (
                   <div
                     key={risk.id}
@@ -109,7 +92,7 @@ export default function TopRisksSlide({ report }: TopRisksSlideProps) {
                           </p>
                         )}
                       </div>
-                      <TrendIcon size={16} className="mt-0.5 shrink-0" style={{ color: trendColor }} />
+                      <TrendIcon size={16} className="mt-0.5 shrink-0" style={{ color: trendColor }} aria-hidden />
                     </div>
                   </div>
                 );
@@ -139,19 +122,21 @@ export default function TopRisksSlide({ report }: TopRisksSlideProps) {
                         {imp}
                       </div>
                     ))}
-                    {levels.map((likelihood) => (
+                    {LEVELS.map((likelihood, row) => (
                       <div key={likelihood} className="contents">
                         <div className="flex items-center justify-end pr-1 text-[11px] font-bold uppercase text-slate-400">
-                          {likelihood[0].toUpperCase()}
+                          {matrixHeaders[row].charAt(0).toUpperCase()}
                         </div>
-                        {levels.map((impact) => {
+                        {LEVELS.map((impact) => {
                           const count = report.topRisks.filter(
                             (r) => r.likelihood === likelihood && r.businessImpact === impact,
                           ).length;
+                          const tone = matrixCell[matrixTone(likelihood, impact)];
                           return (
                             <div
                               key={`${likelihood}-${impact}`}
-                              className={`flex h-[48px] items-center justify-center rounded text-[14px] font-semibold ${cellColor[getRiskColor(likelihood, impact)]}`}
+                              className="flex h-[48px] items-center justify-center rounded text-[14px] font-semibold"
+                              style={{ backgroundColor: tone.bg, color: tone.fg }}
                             >
                               {count || ""}
                             </div>

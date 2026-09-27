@@ -5,13 +5,9 @@ node_modules/
 
 # Testing
 coverage/
-.nyc_output/
-
-# Next.js
-.next/
-out/
-build/
-dist/
+playwright-report/
+test-results/
+blob-report/
 
 # Environment variables
 .env
@@ -45,13 +41,6 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
-# Database
-*.db
-*.db-shm
-*.db-wal
-database.sqlite
-database.sqlite-shm
-database.sqlite-wal
 
 # Temporary files
 *.tmp
@@ -61,7 +50,7 @@ temp/
 
 # Build artifacts
 dist/
-build/
+dev-dist/
 
 # Misc
 .cache/

@@ -1,39 +1,50 @@
 import type { LucideIcon } from "lucide-react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import type { DomainItem, DomainTrend, Report } from "@/types";
-import { useT } from "@/lib/i18n";
+import { useT, type MessageKey } from "@/lib/i18n";
 import { SlideFrame } from "../SlideFrame";
-import { usePrimaryColor } from "../slideConstants";
+import { palette } from "../palette";
 
 interface DomainSlideProps {
   report: Report;
   items: DomainItem[];
   title: string;
   icon: LucideIcon;
+  max: number;
+  emptyKey: MessageKey;
+  /** Show the trend label under each item (threat landscape). */
+  showTrendLabel?: boolean;
 }
 
-const MAX_ITEMS = 6;
-
-const trendIcon: Record<DomainTrend, typeof Minus> = {
+export const trendIcon: Record<DomainTrend, LucideIcon> = {
   more: ArrowUpRight,
   stable: Minus,
   less: ArrowDownRight,
 };
 
-// Neutral color: the arrow conveys direction; we don't imply good vs. bad.
-const TREND_COLOR = "#64748b";
-
-export default function DomainSlide({ report, items, title, icon }: DomainSlideProps) {
+/**
+ * Two-column grid of short items with a direction arrow. Shared by the threat
+ * landscape and the process / human / technology slides. The arrow colour is
+ * neutral: it shows direction, not good vs. bad.
+ */
+export default function DomainSlide({
+  report,
+  items,
+  title,
+  icon,
+  max,
+  emptyKey,
+  showTrendLabel = false,
+}: DomainSlideProps) {
   const t = useT();
-  const accent = usePrimaryColor();
   const visible = items.filter((item) => item.text.trim());
-  const shown = visible.slice(0, MAX_ITEMS);
+  const shown = visible.slice(0, max);
   const remaining = visible.length - shown.length;
 
   return (
-    <SlideFrame report={report} accent={accent} title={title} icon={icon}>
+    <SlideFrame report={report} title={title} icon={icon}>
       {visible.length === 0 ? (
-        <p className="text-[15px] italic text-slate-400">{t("slide.domain.none")}</p>
+        <p className="text-[15px] italic text-slate-400">{t(emptyKey)}</p>
       ) : (
         <div className="flex h-full flex-col justify-center gap-3">
           <div className="grid grid-cols-2 gap-3">
@@ -43,9 +54,9 @@ export default function DomainSlide({ report, items, title, icon }: DomainSlideP
                 <div key={item.id} className="flex items-start gap-3 rounded-lg bg-slate-50 p-4">
                   <span
                     className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white"
-                    style={{ color: TREND_COLOR }}
+                    style={{ color: palette.muted }}
                   >
-                    <TrendIcon size={16} />
+                    <TrendIcon size={16} aria-hidden />
                   </span>
                   <div className="min-w-0">
                     <p className="m-0 text-[15px] font-semibold leading-snug text-slate-900">
@@ -56,6 +67,14 @@ export default function DomainSlide({ report, items, title, icon }: DomainSlideP
                         {item.detail}
                       </p>
                     )}
+                    {showTrendLabel && (
+                      <p
+                        className="m-0 mt-1 text-[11px] font-bold uppercase tracking-wider"
+                        style={{ color: palette.muted }}
+                      >
+                        {t(`trend.${item.trend}`)}
+                      </p>
+                    )}
                   </div>
                 </div>
               );
@@ -63,7 +82,7 @@ export default function DomainSlide({ report, items, title, icon }: DomainSlideP
           </div>
           {remaining > 0 && (
             <p className="m-0 text-[14px] italic text-slate-400">
-              {t("slide.threat.more", { count: remaining })}
+              {t("slide.more", { count: remaining })}
             </p>
           )}
         </div>

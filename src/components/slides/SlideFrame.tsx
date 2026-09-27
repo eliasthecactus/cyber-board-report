@@ -3,16 +3,15 @@ import type { LucideIcon } from "lucide-react";
 import type { Report } from "@/types";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
-import { SLIDE_HEIGHT, SLIDE_WIDTH, TOTAL_SLIDES, usePrimaryColor } from "./slideConstants";
+import { SLIDE_HEIGHT, SLIDE_WIDTH, useAccent, type Accent } from "./slideConstants";
 
 export const SlidePageContext = createContext<{ page: number; total: number }>({
   page: 1,
-  total: TOTAL_SLIDES,
+  total: 1,
 });
 
 interface SlideFrameProps {
   report: Report;
-  accent?: string;
   title?: string;
   icon?: LucideIcon;
   variant?: "default" | "title";
@@ -29,16 +28,16 @@ function Logo({ logo }: { logo: string }) {
   if (!logo) {
     return null;
   }
-  return <img src={logo} alt="" className="max-h-[44px] max-w-[180px] object-contain" />;
+  return <img src={logo} alt="" className="max-h-[44px] max-w-[180px] object-contain" data-slide-image />;
 }
 
-function Footer({ report, accent }: { report: Report; accent: string }) {
+function Footer({ report, accent }: { report: Report; accent: Accent }) {
   const t = useT();
   const { page, total } = useContext(SlidePageContext);
   return (
     <footer className="flex items-center justify-between pt-4 text-[13px] text-slate-400">
       <div className="flex items-center gap-3">
-        <div className="h-[3px] w-8 rounded-full" style={{ backgroundColor: accent, opacity: 0.4 }} />
+        <div className="h-[3px] w-8 rounded-full" style={{ backgroundColor: accent.fill, opacity: 0.4 }} />
         <span className="font-medium">
           {report.quarter} {report.year} &middot; {report.title.trim() || t("report.defaultTitle")}
         </span>
@@ -52,7 +51,6 @@ function Footer({ report, accent }: { report: Report; accent: string }) {
 
 export function SlideFrame({
   report,
-  accent: accentProp,
   title,
   icon: Icon,
   variant = "default",
@@ -60,8 +58,7 @@ export function SlideFrame({
 }: SlideFrameProps) {
   const { settings } = useSettings();
   const logo = settings.logo;
-  const primary = usePrimaryColor();
-  const accent = accentProp || primary;
+  const accent = useAccent();
 
   if (variant === "title") {
     return (
@@ -70,7 +67,7 @@ export function SlideFrame({
         className="relative flex flex-col bg-white px-[72px] py-[56px] text-slate-800"
       >
         <div className="flex items-start justify-between">
-          <div className="h-[3px] w-16 rounded-full" style={{ backgroundColor: accent }} />
+          <div className="h-[3px] w-16 rounded-full" style={{ backgroundColor: accent.fill }} />
           <Logo logo={logo} />
         </div>
         <div className="flex flex-1 flex-col items-center justify-center text-center">
@@ -91,7 +88,7 @@ export function SlideFrame({
           {Icon && (
             <span
               className="flex h-9 w-9 items-center justify-center rounded-lg"
-              style={{ backgroundColor: `${accent}12`, color: accent }}
+              style={{ backgroundColor: `${accent.fill}12`, color: accent.text }}
             >
               <Icon size={20} />
             </span>

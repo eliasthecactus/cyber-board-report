@@ -1,7 +1,10 @@
 import { lazy, Suspense } from "react";
-import { AlertTriangle, Loader2 } from "lucide-react";
-import { navigateTo, useHashRoute } from "@/lib/navigation";
+import { AlertTriangle } from "lucide-react";
+import { useHashRoute } from "@/lib/navigation";
 import { useT } from "@/lib/i18n";
+import { useSettings } from "@/lib/settings";
+import { describeError } from "@/lib/errors";
+import { PageMessage, PageSpinner } from "@/components/ui/PageState";
 
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const ReportEditorPage = lazy(() => import("@/pages/ReportEditorPage"));
@@ -11,58 +14,41 @@ const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 export default function App() {
   const route = useHashRoute();
   const t = useT();
+  const { loading, storageError } = useSettings();
 
-  if (route.name === "dashboard") {
-    return (
-      <Suspense fallback={<AppLoading />}>
-        <DashboardPage />
-      </Suspense>
-    );
+  if (loading) {
+    return <PageSpinner />;
   }
 
-  if (route.name === "editor") {
-    return (
-      <Suspense fallback={<AppLoading />}>
-        <ReportEditorPage reportId={route.id} />
-      </Suspense>
-    );
-  }
-
-  if (route.name === "slides") {
-    return (
-      <Suspense fallback={<AppLoading />}>
-        <SlidesViewerPage reportId={route.id} />
-      </Suspense>
-    );
-  }
-
-  if (route.name === "profile") {
-    return (
-      <Suspense fallback={<AppLoading />}>
-        <ProfilePage />
-      </Suspense>
-    );
+  let page;
+  switch (route.name) {
+    case "dashboard":
+      page = <DashboardPage />;
+      break;
+    case "editor":
+      // Keyed so switching reports remounts the editor, which saves any
+      // pending edits of the previous report first.
+      page = <ReportEditorPage key={route.id} reportId={route.id} />;
+      break;
+    case "slides":
+      page = <SlidesViewerPage key={route.id} reportId={route.id} />;
+      break;
+    case "profile":
+      page = <ProfilePage />;
+      break;
+    default:
+      page = <PageMessage title={t("notFound.title")} />;
   }
 
   return (
-    <main className="app-shell flex min-h-screen items-center justify-center p-6">
-      <section className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-center gap-3">
-          <AlertTriangle className="text-amber-500" size={24} />
-          <h1 className="text-xl font-bold text-slate-900">{t("notFound.title")}</h1>
+    <>
+      {storageError !== null && (
+        <div role="alert" className="flex items-start gap-2 bg-red-600 px-4 py-2 text-sm text-white">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
+          {describeError(t, storageError)}
         </div>
-        <button className="cbr-btn cbr-btn-primary" onClick={() => navigateTo("/")}>
-          {t("notFound.back")}
-        </button>
-      </section>
-    </main>
-  );
-}
-
-function AppLoading() {
-  return (
-    <main className="app-shell flex min-h-screen items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-    </main>
+      )}
+      <Suspense fallback={<PageSpinner />}>{page}</Suspense>
+    </>
   );
 }

@@ -2,32 +2,58 @@ import type { AppSettings, RedactionRule } from "@/types";
 
 export type AiAction = "fill" | "rephrase" | "summarize" | "extend";
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+export const OPENROUTER_ORIGIN = "https://openrouter.ai";
+const OPENROUTER_URL = `${OPENROUTER_ORIGIN}/api/v1/chat/completions`;
+
+/** Error with a stable `code` so the UI can show a translated message. */
+export class AiError extends Error {
+  constructor(
+    public readonly code: "noKey" | "network" | "http" | "empty",
+    public readonly detail = "",
+  ) {
+    super(`AI request failed: ${code}${detail ? ` (${detail})` : ""}`);
+    this.name = "AiError";
+  }
+}
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** A safe default token when the user did not supply a placeholder. */
-function tokenFor(rule: RedactionRule): string {
-  const placeholder = rule.placeholder.trim();
-  if (placeholder) {
-    return placeholder;
-  }
-  const slug = rule.keyword.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
-  return `[REDACTED_${slug || rule.id}]`;
+interface ActiveRule {
+  keyword: string;
+  token: string;
+}
+
+/**
+ * Resolve the rules that will actually be applied: blank keywords dropped,
+ * longest keywords first (so "Acme Bank" wins over "Acme"), and a neutral
+ * numbered token for rules without a placeholder. The generated token must
+ * not be derived from the keyword, or the keyword would leak to the AI.
+ */
+export function activeRules(rules: RedactionRule[]): ActiveRule[] {
+  return rules
+    .map((rule, index) => ({
+      keyword: rule.keyword.trim(),
+      token: rule.placeholder.trim() || `[ENTITY_${index + 1}]`,
+    }))
+    .filter((rule) => rule.keyword)
+    .sort((a, b) => b.keyword.length - a.keyword.length);
+}
+
+/**
+ * Match the keyword only as a whole word/phrase, so "Acme" doesn't redact the
+ * inside of "Acmetrics". Letters and digits of any script count as word chars.
+ */
+function keywordPattern(keyword: string): RegExp {
+  return new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(keyword)}(?![\\p{L}\\p{N}_])`, "giu");
 }
 
 /** Replace every keyword with its placeholder before sending text to the AI. */
 export function applyRedaction(text: string, rules: RedactionRule[]): string {
   let output = text;
-  for (const rule of rules) {
-    const keyword = rule.keyword.trim();
-    if (!keyword) {
-      continue;
-    }
-    // Case-insensitive so variations are caught; restored to the canonical keyword.
-    output = output.replace(new RegExp(escapeRegExp(keyword), "gi"), tokenFor(rule));
+  for (const rule of activeRules(rules)) {
+    output = output.replace(keywordPattern(rule.keyword), rule.token);
   }
   return output;
 }
@@ -35,29 +61,33 @@ export function applyRedaction(text: string, rules: RedactionRule[]): string {
 /** Swap placeholders back to their original keyword in the AI's response. */
 export function restoreRedaction(text: string, rules: RedactionRule[]): string {
   let output = text;
-  for (const rule of rules) {
-    const keyword = rule.keyword.trim();
-    if (!keyword) {
-      continue;
-    }
-    const token = tokenFor(rule);
-    output = output.replace(new RegExp(escapeRegExp(token), "g"), keyword);
+  // Longest token first so "[CLIENT_A]" isn't partially matched by "[CLIENT]".
+  const byToken = [...activeRules(rules)].sort((a, b) => b.token.length - a.token.length);
+  for (const rule of byToken) {
+    output = output.replace(new RegExp(escapeRegExp(rule.token), "gi"), () => rule.keyword);
   }
   return output;
 }
 
-interface ChatMessage {
+/** Placeholders used by more than one rule can't be restored unambiguously. */
+export function duplicatePlaceholders(rules: RedactionRule[]): string[] {
+  const seen = new Map<string, number>();
+  for (const rule of activeRules(rules)) {
+    const key = rule.token.toLowerCase();
+    seen.set(key, (seen.get(key) ?? 0) + 1);
+  }
+  return [...seen].filter(([, count]) => count > 1).map(([token]) => token);
+}
+
+export interface ChatMessage {
   role: "system" | "user";
   content: string;
 }
 
-async function callOpenRouter(
-  settings: AppSettings,
-  messages: ChatMessage[],
-): Promise<string> {
+async function callOpenRouter(settings: AppSettings, messages: ChatMessage[]): Promise<string> {
   const apiKey = settings.openRouterApiKey.trim();
   if (!apiKey) {
-    throw new Error("No OpenRouter API key configured.");
+    throw new AiError("noKey");
   }
 
   let response: Response;
@@ -77,20 +107,18 @@ async function callOpenRouter(
       }),
     });
   } catch {
-    throw new Error("Could not reach OpenRouter. Check your network connection.");
+    throw new AiError("network");
   }
 
   if (!response.ok) {
-    let detail = "";
+    let detail: string;
     try {
       const errJson = (await response.json()) as { error?: { message?: string } };
       detail = errJson?.error?.message ?? "";
     } catch {
       detail = "";
     }
-    throw new Error(
-      `OpenRouter request failed (${response.status})${detail ? `: ${detail}` : ""}.`,
-    );
+    throw new AiError("http", `${response.status}${detail ? `: ${detail}` : ""}`);
   }
 
   const data = (await response.json()) as {
@@ -98,7 +126,7 @@ async function callOpenRouter(
   };
   const content = data.choices?.[0]?.message?.content;
   if (typeof content !== "string" || !content.trim()) {
-    throw new Error("OpenRouter returned an empty response.");
+    throw new AiError("empty");
   }
   return content.trim();
 }
@@ -208,10 +236,10 @@ export interface AssistParams {
 }
 
 /**
- * Run an AI writing action. All outbound text is redacted using the configured
- * rules; placeholders are restored in the returned text.
+ * Build the exact, already-redacted messages that would be sent to the AI.
+ * Used both for the request itself and for the "what will be sent" preview.
  */
-export async function assistText(params: AssistParams): Promise<string> {
+export function buildAssistMessages(params: AssistParams): ChatMessage[] {
   const { action, fieldLabel, fieldText, context = "", itemContext = "", settings } = params;
   const rules = settings.redactionRules;
 
@@ -222,15 +250,25 @@ export async function assistText(params: AssistParams): Promise<string> {
     `Return only the requested field text — no preamble, no explanations, no quotation marks, no markdown code fences, ` +
     `and never prefix your answer with the field name or a label like "Field:".`;
 
-  const safeField = applyRedaction(fieldText, rules);
-  const safeContext = applyRedaction(context, rules);
-  const safeItemContext = applyRedaction(itemContext, rules);
-  const userPrompt = buildUserPrompt(action, fieldLabel, safeField, safeContext, safeItemContext);
+  const userPrompt = buildUserPrompt(
+    action,
+    fieldLabel,
+    applyRedaction(fieldText, rules),
+    applyRedaction(context, rules),
+    applyRedaction(itemContext, rules),
+  );
 
-  const raw = await callOpenRouter(settings, [
+  return [
     { role: "system", content: system },
     { role: "user", content: userPrompt },
-  ]);
+  ];
+}
 
-  return stripLabelEcho(restoreRedaction(raw, rules), fieldLabel);
+/**
+ * Run an AI writing action. All outbound text is redacted using the configured
+ * rules; placeholders are restored in the returned text.
+ */
+export async function assistText(params: AssistParams): Promise<string> {
+  const raw = await callOpenRouter(params.settings, buildAssistMessages(params));
+  return stripLabelEcho(restoreRedaction(raw, params.settings.redactionRules), params.fieldLabel);
 }

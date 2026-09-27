@@ -1,17 +1,37 @@
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Download, ImageIcon, Loader2, Palette, Pencil, Plus, RotateCcw, Sparkles, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Download,
+  HardDrive,
+  ImageIcon,
+  Loader2,
+  Palette,
+  Pencil,
+  Plus,
+  RotateCcw,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import type { AppLanguage, RedactionRule } from "@/types";
 import { DEFAULT_PRIMARY_COLOR } from "@/lib/settingsDefaults";
-import { backupFilename, downloadJson } from "@/lib/files";
 import { navigateTo } from "@/lib/navigation";
 import { createId } from "@/lib/reportFactory";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
+import { describeError } from "@/lib/errors";
+import { contrastRatio } from "@/lib/color";
+import { duplicatePlaceholders } from "@/lib/openrouter";
+import { BackupExportDialog } from "@/components/dashboard/BackupExportDialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PageSpinner } from "@/components/ui/PageState";
 import {
   clearLocalData,
-  exportSnapshot,
   getProfile,
+  listReports,
   renameReportAuthor,
+  requestPersistentStorage,
   saveProfile,
   type LocalProfile,
 } from "@/lib/storage";
@@ -27,17 +47,30 @@ export default function ProfilePage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [backupOpen, setBackupOpen] = useState(false);
+  const [reportCount, setReportCount] = useState(0);
+  const [persisted, setPersisted] = useState<boolean | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  // Read through a ref so switching the language here doesn't reload the page data.
+  const tRef = useRef(t);
+  tRef.current = t;
 
   useEffect(() => {
     const loadProfile = async () => {
-      const storedProfile = await getProfile();
-      setProfile(storedProfile);
-      setNewName(storedProfile.displayName);
-      setLoading(false);
+      try {
+        const [storedProfile, reports] = await Promise.all([getProfile(), listReports()]);
+        setProfile(storedProfile);
+        setNewName(storedProfile.displayName);
+        setReportCount(reports.length);
+      } catch (err) {
+        setError(describeError(tRef.current, err));
+      } finally {
+        setLoading(false);
+      }
     };
 
     void loadProfile();
+    void navigator.storage?.persisted?.().then(setPersisted, () => setPersisted(null));
   }, []);
 
   const handleUpdateName = async (event: FormEvent<HTMLFormElement>) => {
@@ -73,14 +106,10 @@ export default function ProfilePage() {
       setNewName(updatedProfile.displayName);
       setSuccess(t("settings.profileUpdated"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("settings.profileUpdateFailed"));
+      setError(describeError(t, err, "settings.profileUpdateFailed"));
     } finally {
       setUpdating(false);
     }
-  };
-
-  const handleBackup = async () => {
-    downloadJson(backupFilename(), await exportSnapshot());
   };
 
   const handleDeleteAll = async () => {
@@ -90,7 +119,7 @@ export default function ProfilePage() {
       setShowDeleteConfirm(false);
       navigateTo("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("settings.clearDataFailed"));
+      setError(describeError(t, err, "settings.clearDataFailed"));
       setDeleting(false);
     }
   };
@@ -99,6 +128,10 @@ export default function ProfilePage() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) {
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError(t("settings.logoNotImage"));
       return;
     }
     if (file.size > 1_000_000) {
@@ -137,25 +170,24 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return (
-      <main className="app-shell flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-      </main>
-    );
+    return <PageSpinner />;
   }
 
   const aiEnabled = Boolean(settings.openRouterApiKey.trim());
+  const primaryColor = settings.primaryColor || DEFAULT_PRIMARY_COLOR;
+  const lowContrast = contrastRatio(primaryColor, "#ffffff") < 3;
+  const duplicateTokens = duplicatePlaceholders(settings.redactionRules);
 
   return (
     <main className="app-shell min-h-screen">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <button className="cbr-btn cbr-btn-ghost" onClick={() => navigateTo("/")}>
-            <ArrowLeft size={16} />
+            <ArrowLeft size={16} aria-hidden />
             {t("common.dashboard")}
           </button>
-          <button className="cbr-btn cbr-btn-outline cbr-btn-sm" onClick={() => void handleBackup()}>
-            <Download size={14} />
+          <button className="cbr-btn cbr-btn-outline cbr-btn-sm" onClick={() => setBackupOpen(true)}>
+            <Download size={14} aria-hidden />
             {t("common.backup")}
           </button>
         </div>
@@ -181,6 +213,7 @@ export default function ProfilePage() {
           <form onSubmit={handleUpdateName} className="flex flex-col gap-2 sm:flex-row">
             <input
               type="text"
+              aria-label={t("settings.displayName")}
               value={newName}
               onChange={(event) => setNewName(event.target.value)}
               placeholder={t("settings.displayNamePlaceholder")}
@@ -196,9 +229,9 @@ export default function ProfilePage() {
               className="cbr-btn cbr-btn-primary"
             >
               {updating ? (
-                <Loader2 size={14} className="animate-spin" />
+                <Loader2 size={14} className="animate-spin" aria-hidden />
               ) : (
-                <Pencil size={14} />
+                <Pencil size={14} aria-hidden />
               )}
               {updating ? t("common.saving") : t("common.update")}
             </button>
@@ -211,6 +244,7 @@ export default function ProfilePage() {
           <p className="mb-3 text-sm text-slate-500">{t("settings.languageDesc")}</p>
           <select
             className="form-input w-full sm:max-w-xs"
+            aria-label={t("settings.language")}
             value={settings.language}
             onChange={(event) => void update({ language: event.target.value as AppLanguage })}
           >
@@ -232,6 +266,7 @@ export default function ProfilePage() {
             accept="image/*"
             className="hidden"
             onChange={handleLogoUpload}
+            aria-label={t("settings.uploadLogo")}
           />
           <div className="flex flex-wrap items-center gap-4">
             {settings.logo ? (
@@ -275,19 +310,20 @@ export default function ProfilePage() {
           <p className="mb-4 text-sm text-slate-500">{t("settings.primaryColorDesc")}</p>
           <div className="flex flex-wrap items-center gap-4">
             <label className="relative cursor-pointer">
+              <span className="sr-only">{t("settings.primaryColor")}</span>
               <input
                 type="color"
-                value={settings.primaryColor || DEFAULT_PRIMARY_COLOR}
+                value={primaryColor}
                 onChange={(e) => void update({ primaryColor: e.target.value })}
                 className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
               />
               <span
                 className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 shadow-sm"
-                style={{ backgroundColor: settings.primaryColor || DEFAULT_PRIMARY_COLOR }}
+                style={{ backgroundColor: primaryColor }}
               />
             </label>
             <span className="font-mono text-sm text-slate-500">
-              {(settings.primaryColor || DEFAULT_PRIMARY_COLOR).toUpperCase()}
+              {primaryColor.toUpperCase()}
             </span>
             {settings.primaryColor && settings.primaryColor !== DEFAULT_PRIMARY_COLOR && (
               <button
@@ -300,6 +336,12 @@ export default function ProfilePage() {
               </button>
             )}
           </div>
+          {lowContrast && (
+            <p role="note" className="mt-3 flex items-start gap-2 text-sm text-amber-800">
+              <AlertTriangle size={15} className="mt-0.5 shrink-0" aria-hidden />
+              {t("settings.lowContrast")}
+            </p>
+          )}
         </section>
 
         {/* AI assistance */}
@@ -309,13 +351,19 @@ export default function ProfilePage() {
             {t("settings.ai")}
           </h2>
           <p className="mb-4 text-sm text-slate-500">{t("settings.aiDesc")}</p>
+          <p className="mb-4 flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+            <ShieldCheck size={16} className="mt-0.5 shrink-0 text-slate-500" aria-hidden />
+            {t("settings.aiPrivacy")}
+          </p>
 
           <div className="mb-4">
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label htmlFor="api-key" className="mb-1.5 block text-sm font-medium text-slate-700">
               {t("settings.apiKey")}
             </label>
             <input
+              id="api-key"
               type="password"
+              spellCheck={false}
               autoComplete="off"
               value={settings.openRouterApiKey}
               onChange={(event) => void update({ openRouterApiKey: event.target.value })}
@@ -333,10 +381,11 @@ export default function ProfilePage() {
           </div>
 
           <div className="mb-3">
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label htmlFor="ai-model" className="mb-1.5 block text-sm font-medium text-slate-700">
               {t("settings.model")}
             </label>
             <input
+              id="ai-model"
               type="text"
               value={settings.openRouterModel}
               onChange={(event) => void update({ openRouterModel: event.target.value })}
@@ -391,19 +440,47 @@ export default function ProfilePage() {
                     className="cbr-btn cbr-btn-ghost cbr-btn-sm cbr-btn-icon text-red-500"
                     onClick={() => removeRule(rule.id)}
                     title={t("common.remove")}
-                    aria-label={t("common.remove")}
+                    aria-label={t("redaction.remove", { keyword: rule.keyword || "—" })}
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={14} aria-hidden />
                   </button>
                 </div>
               ))}
             </div>
           )}
 
+          <p className="mb-3 text-xs text-slate-500">{t("redaction.matching")}</p>
+          {duplicateTokens.length > 0 && (
+            <p role="alert" className="mb-3 flex items-start gap-2 text-sm text-amber-800">
+              <AlertTriangle size={15} className="mt-0.5 shrink-0" aria-hidden />
+              {t("redaction.duplicate", { tokens: duplicateTokens.join(", ") })}
+            </p>
+          )}
+
           <button type="button" className="cbr-btn cbr-btn-outline cbr-btn-sm" onClick={addRule}>
-            <Plus size={14} />
+            <Plus size={14} aria-hidden />
             {t("redaction.add")}
           </button>
+        </section>
+
+        {/* Storage persistence */}
+        <section className="mb-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-1 flex items-center gap-2 text-base font-semibold text-slate-900">
+            <HardDrive size={16} className="text-primary" aria-hidden />
+            {t("settings.storage")}
+          </h2>
+          <p className="mb-3 text-sm text-slate-500">
+            {persisted ? t("settings.storagePersistent") : t("settings.storageBestEffort")}
+          </p>
+          {persisted === false && (
+            <button
+              type="button"
+              className="cbr-btn cbr-btn-outline cbr-btn-sm"
+              onClick={() => void requestPersistentStorage().then(setPersisted)}
+            >
+              {t("settings.storageRequest")}
+            </button>
+          )}
         </section>
 
         {/* Local data */}
@@ -417,42 +494,32 @@ export default function ProfilePage() {
               onClick={() => setShowDeleteConfirm(true)}
               className="cbr-btn cbr-btn-danger"
             >
-              <Trash2 size={14} />
+              <Trash2 size={14} aria-hidden />
               {t("settings.clearData")}
             </button>
           </div>
         </section>
       </section>
 
-      {/* Delete confirmation dialog */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
-            <h3 className="text-base font-bold text-slate-900">{t("settings.clearConfirmTitle")}</h3>
-            <p className="py-4 text-sm text-slate-600">{t("settings.clearConfirmBody")}</p>
-            <div className="flex justify-end gap-2">
-              <button
-                className="cbr-btn cbr-btn-ghost"
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={deleting}
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                className="cbr-btn cbr-btn-danger"
-                onClick={() => void handleDeleteAll()}
-                disabled={deleting}
-              >
-                {deleting && <Loader2 size={14} className="animate-spin" />}
-                {deleting ? t("settings.clearing") : t("settings.clearData")}
-              </button>
-            </div>
-          </div>
-          <div
-            className="fixed inset-0 -z-10"
-            onClick={() => setShowDeleteConfirm(false)}
-          />
-        </div>
+        <ConfirmDialog
+          title={t("settings.clearConfirmTitle")}
+          body={t("settings.clearConfirmBody")}
+          confirmLabel={deleting ? t("settings.clearing") : t("settings.clearData")}
+          danger
+          busy={deleting}
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={() => void handleDeleteAll()}
+        />
+      )}
+
+      {backupOpen && (
+        <BackupExportDialog
+          reportCount={reportCount}
+          displayName={profile?.displayName ?? ""}
+          onClose={() => setBackupOpen(false)}
+          onError={(err) => setError(describeError(t, err))}
+        />
       )}
     </main>
   );

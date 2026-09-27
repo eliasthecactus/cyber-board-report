@@ -1,46 +1,34 @@
-import { Report } from "@/types";
+import type { Report } from "@/types";
 import { AlertCircle } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { SlideFrame } from "../SlideFrame";
-import { usePrimaryColor } from "../slideConstants";
+import { SLIDE_LIMITS } from "../slideConstants";
+import { levelColor } from "../palette";
 
 interface IncidentsSlideProps {
   report: Report;
 }
 
-const severityColor: Record<string, string> = {
-  critical: "#9f1239",
-  high: "#92400e",
-  medium: "#1e3a5f",
-  low: "#065f46",
-};
-
-const MAX_INCIDENTS = 3;
-
 export default function IncidentsSlide({ report }: IncidentsSlideProps) {
   const t = useT();
-  const accent = usePrimaryColor();
-  const incidents = report.incidents.slice(0, MAX_INCIDENTS);
+  const incidents = report.incidents.slice(0, SLIDE_LIMITS.incidents);
+  const remaining = report.incidents.length - incidents.length;
 
   return (
-    <SlideFrame report={report} accent={accent} title={t("ed.inc.title")} icon={AlertCircle}>
+    <SlideFrame report={report} title={t("ed.inc.title")} icon={AlertCircle}>
       {report.incidents.length === 0 ? (
         <p className="text-[15px] italic text-slate-400">{t("slide.incidents.none")}</p>
       ) : (
         <div className="flex h-full flex-col justify-center gap-3">
           {incidents.map((incident) => {
             const severity = incident.severity || "medium";
-            const color = severityColor[severity];
             return (
-              <div
-                key={incident.id}
-                className="rounded-lg bg-slate-50 p-4"
-              >
+              <div key={incident.id} className="rounded-lg bg-slate-50 p-4">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <h3 className="m-0 text-[17px] font-bold text-slate-900">{incident.title}</h3>
                   <span
                     className="shrink-0 rounded px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white"
-                    style={{ backgroundColor: color }}
+                    style={{ backgroundColor: levelColor[severity] }}
                   >
                     {t(`enum.${severity}`)}
                   </span>
@@ -70,6 +58,11 @@ export default function IncidentsSlide({ report }: IncidentsSlideProps) {
               </div>
             );
           })}
+          {remaining > 0 && (
+            <p className="m-0 text-[14px] italic text-slate-400">
+              {t("slide.more", { count: remaining })}
+            </p>
+          )}
         </div>
       )}
     </SlideFrame>
