@@ -30,3 +30,7 @@ updates:
     target-branch: dev
     schedule:
       interval: weekly
+    ignore:
+      # The image's Node.js must match .nvmrc (24).
+      - dependency-name: node
+        versions: [">=25"]
