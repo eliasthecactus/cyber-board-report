@@ -1,174 +1,148 @@
 # cyber-board-report
 
-A local-first web app for creating, editing, presenting, and exporting quarterly cyber security board reports.
+A local-first web app for creating, editing, presenting and exporting quarterly cyber security board reports.
 
-The app is now a client-only Vite/React single page app. There is no backend, no API server, no authentication service, and no database process. Report data is saved in the browser on the client side using IndexedDB, with localStorage as a fallback.
+The app is a client-only Vite/React single-page app. There is no backend, API server, authentication service or database process. Reports are stored in the browser's IndexedDB and the app works offline once it has loaded.
 
-## Local-First Model
+## Local-first model
 
-- All reports and profile settings stay in the current browser profile.
-- The built app is static HTML, CSS, and JavaScript.
-- Import and backup use JSON files that you download or select manually.
-- There is no multi-user sharing. Use JSON backup/import when you need to move data between browsers or machines.
-- Clearing browser site data removes the reports unless you have exported a backup.
+- All reports and settings stay in the current browser profile.
+- The built app is static HTML, CSS and JavaScript, and it installs as an offline-capable PWA.
+- Backup and import use JSON files that you download or select yourself.
+- There is no multi-user sharing. Use a JSON backup to move data between browsers or machines.
+- **Clearing browser site data removes your reports.** The dashboard reminds you to back up when your last backup is older than two weeks. Under **Settings → Storage protection** you can ask the browser for persistent storage, so it won't evict the data when disk space runs low.
 
 ## Features
 
-- Guided report editor with structured board-report sections
-- Automatic local autosave while editing
-- Dashboard for create, duplicate, delete, import, and backup
-- Slide preview and full-screen presentation mode
-- PDF export with `jsPDF` and `html2canvas-pro`
-- JSON export for all data or a single report
-- Browser-only persistence through IndexedDB
+- Guided editor for the board-report sections, with autosave. Unsaved edits are saved when you leave the page and the browser warns before you close the tab.
+- Copy a section from the previous quarter's report
+- Dashboard with create, duplicate, change quarter, delete (with undo), import and backup
+- Slide preview and full-screen presentation mode (arrow keys, Page Up/Down, Home/End)
+- Option to hide empty slides; the editor warns when a section has more items than fit on its slide
+- Exports:
+  - **PDF with selectable text** via the browser's print dialog: vector output, small files
+  - **PDF image** (lossless, pixel-exact), downloaded directly
+  - **PowerPoint (.pptx)** with native, editable text boxes and charts
+- Optional AI writing help (see below)
+- English and German interface
+- Custom logo and brand colour; text colours are adjusted automatically to stay readable
 
-## Quick Start
+## AI assistance and privacy
 
-### Prerequisites
+AI help is **off** until you add an [OpenRouter](https://openrouter.ai) API key under **Settings**. When you use an AI action (Fill, Rephrase, Summarize, Extend), the app sends the field text **and the rest of the report** (as context) straight from your browser to OpenRouter and the model provider you selected. Nothing is sent otherwise.
 
-- Node.js 20+
-- npm 10+
+- **Redaction rules** replace sensitive terms (company, product or people names) with placeholders before anything is sent, and swap them back in the answer. Matching ignores case and only replaces whole words; longer terms are replaced first. If you leave the placeholder empty, a neutral token like `[ENTITY_1]` is used.
+- **"What's sent?"** under each AI-enabled field shows the exact redacted request before you send anything.
+- The API key is stored in this browser only. It is **left out of backups** unless you explicitly tick it when exporting. When importing a backup, AI settings and keys are never preselected.
 
-### Install
+## Quick start
+
+Prerequisites: Node.js 24 (see `.nvmrc`) and npm 10+.
 
 ```bash
 npm install
+npm run dev        # http://127.0.0.1:5173
 ```
 
-### Run Locally
+## Scripts
 
-```bash
-npm run dev
-```
+| Command | What it does |
+|---|---|
+| `npm run dev` | Vite dev server |
+| `npm run build` | Type-check and production build into `dist/` |
+| `npm run preview` | Serve `dist/` locally |
+| `npm run typecheck` | TypeScript only |
+| `npm run lint` | ESLint 10 (TypeScript, React hooks, jsx-a11y) |
+| `npm test` | Unit tests (Vitest) |
+| `npm run test:e2e` | End-to-end smoke tests against the production build (Playwright; run `npx playwright install chromium` once) |
 
-Open the local URL printed by Vite, usually:
-
-```text
-http://127.0.0.1:5173
-```
-
-### Build Static Assets
-
-```bash
-npm run build
-```
-
-The production build is written to `dist/`.
-
-### Preview The Build
-
-```bash
-npm run preview
-```
-
-The app uses hash routes and relative asset paths, so it is suitable for simple local static hosting.
+The app uses hash routes and relative asset paths, so it works on any static host, including under a sub-path.
 
 ## Docker
 
-Build the image locally:
-
-```bash
-docker build -t cyber-board-report:local .
-```
-
-Run it:
-
-```bash
-docker run --rm -p 8080:8080 cyber-board-report:local
-```
-
-Open:
-
-```text
-http://127.0.0.1:8080
-```
-
-Or use Compose:
-
 ```bash
 docker compose up --build
+# or
+docker build -t cyber-board-report:local .
+docker run --rm -p 8080:8080 --read-only --tmpfs /tmp --tmpfs /var/cache/nginx cyber-board-report:local
 ```
 
-The container serves the static `dist/` build with nginx on port `8080`. Report data still stays in the user's browser through IndexedDB/localStorage; the container does not store application data.
+Open http://127.0.0.1:8080. The image serves the static build with unprivileged nginx on port 8080. It sends a strict Content-Security-Policy, other security headers and gzip. Compose runs the container read-only with all capabilities dropped. The container stores no application data.
 
-## Data Backup
+## Data backup
 
-Use **Backup** in the dashboard or profile page to download a JSON snapshot containing:
+**Backup** (dashboard or settings) downloads a JSON snapshot. You choose what to include: reports, display name, logo, colour, AI model and redaction rules, the API key (off by default), and language.
 
-- profile settings
-- all local reports
+**Import** on the dashboard restores a snapshot or a single exported report. You choose what to restore. If an imported report ID already exists, the import gets a new ID instead of overwriting.
 
-Use **Import** on the dashboard to restore a snapshot or import a single exported report. If an imported report ID already exists in the browser, the app assigns a new ID to avoid overwriting existing data.
+The file format and schema versioning are documented in [docs/data-model.md](docs/data-model.md).
 
-## Tech Stack
+## Security notes
+
+- The app is designed for local use and local browser storage. It has no server-side access control, central backups, audit logs or collaboration permissions.
+- The built `index.html` carries a Content-Security-Policy that only allows same-origin resources plus `https://openrouter.ai` for AI requests. The nginx image sends the same policy as a header, plus `frame-ancestors 'none'`. Keep `CONTENT_SECURITY_POLICY` in `vite.config.ts` and `nginx.conf` in sync.
+- Imported data is validated field by field. Logos must be image data URLs, so an imported file can't make the app load remote resources.
+- Treat exported JSON, PDF and PPTX files as sensitive board material.
+
+## CI, packages and Pages
+
+`.github/workflows/release.yml` (all actions pinned to commit SHAs):
+
+- On pull requests to `main`: lint, unit tests, build, `npm audit --omit=dev`, Playwright e2e tests.
+- On pushes to `main`: the same checks, then publish a multi-arch Docker image (`linux/amd64`, `linux/arm64`) to GitHub Container Registry and deploy the static build to GitHub Pages.
+- On `v*.*.*` tags and published releases: the checks, then a versioned image.
+
+Image name: `ghcr.io/<owner>/<repo>`, tagged `latest` (default branch), branch name, semver and `sha-<commit>`.
+
+Dependabot (`.github/dependabot.yml`) opens weekly update PRs for npm, GitHub Actions and the Docker base images.
+
+For GitHub Pages, set the repository's Pages source to **GitHub Actions**.
+
+## Tech stack
 
 | Layer | Technology |
 |---|---|
-| App shell | Vite + React 18 |
-| Language | TypeScript |
-| Styling | Tailwind CSS 4 + DaisyUI 5 |
+| App shell | Vite 8 + React 19 |
+| Language | TypeScript 6 (strict) |
+| Styling | Tailwind CSS 4 |
 | Charts | Recharts |
-| Persistence | IndexedDB with localStorage fallback |
-| PDF export | jsPDF + html2canvas-pro |
+| Persistence | IndexedDB |
+| Exports | Browser print (vector PDF), jsPDF + html2canvas-pro (image PDF), PptxGenJS (PowerPoint) |
+| Offline | vite-plugin-pwa (Workbox) |
 | Icons | lucide-react |
+| Tests | Vitest, Testing Library, fake-indexeddb, Playwright |
 
-## Project Structure
+## Project structure
 
 ```text
 src/
-├── pages/                     # Client-only dashboard, editor, slides, profile
+├── pages/                  # Dashboard, editor, slide viewer, settings
 ├── components/
-│   ├── editors/               # Section editor components
-│   ├── slides/                # Slide renderer components
-│   └── ui/                    # Shared UI primitives
+│   ├── dashboard/          # Report cards, backup dialogs, backup reminder
+│   ├── editors/            # One editor per report section
+│   ├── export/             # Export dialog, progress, useReportExport hook
+│   ├── slides/             # Slide registry, palette, frame and slide components
+│   └── ui/                 # Modal, ConfirmDialog, Toast, AiTextarea, NumberInput
 ├── lib/
-│   ├── storage.ts             # IndexedDB/localStorage persistence
-│   ├── reportFactory.ts       # Report creation and normalization
-│   ├── navigation.ts          # Hash routing
-│   └── files.ts               # JSON import/export helpers
-├── styles/
-│   └── globals.css
+│   ├── storage.ts          # IndexedDB persistence, backup/import
+│   ├── reportFactory.ts    # Report creation, validation and schema upgrades
+│   ├── useAutosave.ts      # Debounced autosave that never drops edits
+│   ├── openrouter.ts       # AI requests and redaction
+│   ├── exportPdf.ts        # Image PDF export
+│   ├── exportPptx.ts       # PowerPoint export
+│   ├── i18n/               # Typed en/de dictionaries
+│   └── …
+├── styles/globals.css
 ├── App.tsx
 ├── main.tsx
 └── types.ts
+e2e/                        # Playwright smoke tests
+docs/data-model.md          # Report and backup file format
 ```
 
-## Development
+## Translations
 
-```bash
-npm run dev        # Vite dev server
-npm run build      # Type check and production build
-npm run preview    # Serve dist locally
-npm run typecheck  # TypeScript only
-```
-
-## CI, Packages, And Pages
-
-The workflow at `.github/workflows/release.yml` does the following:
-
-- On pull requests to `main`: installs dependencies, builds the app, and runs `npm audit --audit-level=moderate`.
-- On pushes to `main`: verifies the app, publishes a Docker image to GitHub Container Registry, and deploys the static build to GitHub Pages.
-- On semantic version tags like `v1.2.3` and published GitHub releases: verifies the app and publishes a versioned Docker image to GitHub Container Registry.
-- Publishes multi-architecture images for `linux/amd64` and `linux/arm64`.
-
-Published image name:
-
-```text
-ghcr.io/<owner>/<repo>
-```
-
-Typical tags include:
-
-- `latest` for the default branch
-- the branch name
-- semantic version tags from `v1.2.3`
-- `sha-<commit>`
-
-For GitHub Pages, set the repository's Pages source to **GitHub Actions** in repository settings. The app uses hash routing and relative assets, so it works under a repository Pages path without a custom Vite base path.
-
-## Security Notes
-
-This app is designed for local deployment and local browser storage. It does not provide server-side access controls, central backups, audit logs, or collaborative permissions. Treat exported JSON/PDF files as sensitive board-report material and store them accordingly.
+UI text lives in `src/lib/i18n/en.ts` (the source of truth) and `de.ts`. Keys are type-checked: using an unknown key, or leaving a German key missing, fails `npm run typecheck`. For counts, add `key.one` / `key.other` variants and call `t("key", { count })`.
 
 ## License
 

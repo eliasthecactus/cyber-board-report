@@ -14,3 +14,8 @@ tmp
 temp
 .cache
 .turbo
+e2e
+playwright-report
+test-results
+dev-dist
+docs
