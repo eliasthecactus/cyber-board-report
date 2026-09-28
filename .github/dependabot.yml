@@ -2,6 +2,8 @@ version: 2
 updates:
   - package-ecosystem: npm
     directory: /
+    # Updates land on dev first and reach main with the next release.
+    target-branch: dev
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
@@ -9,13 +11,26 @@ updates:
       # Batch routine minor/patch bumps; majors arrive as individual PRs.
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # Types must match the Node.js runtime in .nvmrc (24).
+      - dependency-name: "@types/node"
+        versions: [">=25"]
+      # typescript-eslint supports TypeScript < 6.1 only.
+      - dependency-name: typescript
+        versions: [">=6.1"]
 
   - package-ecosystem: github-actions
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
 
   - package-ecosystem: docker
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
+    ignore:
+      # The image's Node.js must match .nvmrc (24).
+      - dependency-name: node
+        versions: [">=25"]

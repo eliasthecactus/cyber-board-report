@@ -133,8 +133,10 @@ jobs:
   build-pages:
     name: Build GitHub Pages site
     needs: verify
-    if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev')
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref_name == 'main' || github.ref_name == 'dev')
     runs-on: ubuntu-latest
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact_id }}
 
     steps:
       - name: Checkout main (production)
@@ -187,6 +189,7 @@ jobs:
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
 
       - name: Upload GitHub Pages artifact
+        id: upload
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: site
@@ -205,12 +208,57 @@ jobs:
     permissions:
       pages: write
       id-token: write
+      # Only for the marker commit below; no branch or tag is changed.
+      contents: write
 
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
+      # Pages keeps the existing deployment when a build version is deployed
+      # again, and actions/deploy-pages always uses the commit SHA as that
+      # version. main and dev often point at the same commit (a new dev
+      # branch, fast-forward merges) while the site content differs, so a
+      # deployment would be silently skipped. The version must be a commit in
+      # this repository, so create a marker commit (same tree, not on any
+      # branch) per run and deploy through the Pages API with its SHA.
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          ARTIFACT_ID: ${{ needs.build-pages.outputs.artifact_id }}
+        with:
+          script: |
+            const { data: head } = await github.rest.git.getCommit({ ...context.repo, commit_sha: context.sha });
+            const { data: marker } = await github.rest.git.createCommit({
+              ...context.repo,
+              message: `Pages deployment from ${context.ref} (run ${context.runId})`,
+              tree: head.tree.sha,
+              parents: [context.sha],
+            });
+            const version = marker.sha;
+            const { data: deployment } = await github.request("POST /repos/{owner}/{repo}/pages/deployments", {
+              ...context.repo,
+              artifact_id: Number(process.env.ARTIFACT_ID),
+              pages_build_version: version,
+              oidc_token: await core.getIDToken(),
+            });
+            core.setOutput("page_url", deployment.page_url);
+            core.info(`Created Pages deployment ${deployment.id} (${version})`);
+
+            const failed = ["deployment_failed", "deployment_content_failed", "deployment_cancelled", "deployment_lost", "deployment_attempt_error"];
+            for (let attempt = 0; attempt < 120; attempt += 1) {
+              await new Promise((resolve) => setTimeout(resolve, 5000));
+              const { data } = await github.request("GET /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}", {
+                ...context.repo,
+                pages_deployment_id: deployment.id,
+              });
+              core.info(`Status: ${data.status}`);
+              if (data.status === "succeed") return;
+              if (failed.includes(data.status)) {
+                core.setFailed(`Pages deployment ended with status ${data.status}`);
+                return;
+              }
+            }
+            core.setFailed("Timed out waiting for the Pages deployment");

@@ -94,7 +94,7 @@ The file format and schema versioning are documented in [docs/data-model.md](doc
 
 Image name: `ghcr.io/<owner>/<repo>`, tagged `latest` (default branch), branch name, semver and `sha-<commit>`.
 
-Dependabot (`.github/dependabot.yml`) opens weekly update PRs for npm, GitHub Actions and the Docker base images.
+Dependabot (`.github/dependabot.yml`) opens weekly update PRs against `dev` for npm, GitHub Actions and the Docker base images.
 
 ### Production and dev deployments
 
@@ -105,7 +105,7 @@ Dependabot (`.github/dependabot.yml`) opens weekly update PRs for npm, GitHub Ac
 
 Work on `dev` (or on feature branches merged into `dev`), check it on `/dev/`, then merge `dev` into `main` to release.
 
-GitHub Pages serves one site per repository and every deployment replaces the whole site. So each push to either branch builds **both** branches and publishes them together.
+GitHub Pages serves one site per repository and every deployment replaces the whole site. So each push to either branch builds **both** branches and publishes them together. Pages also skips a deployment whose build version (normally the commit SHA) was deployed before, which happens whenever `main` and `dev` point at the same commit. The workflow therefore deploys through the Pages API using a marker commit that is unique per run: it has the same tree and is not on any branch. To redeploy manually, run the workflow from the Actions tab on `main` or `dev`.
 
 The dev build is made with `VITE_APP_CHANNEL=dev`. Because it shares the browser origin with production, it:
 
