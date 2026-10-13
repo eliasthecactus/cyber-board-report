@@ -32,7 +32,7 @@ export const levelColor: Record<Level, string> = {
 export const statusColor: Record<InitiativeStatus, string> = {
   "on-track": "#065f46",
   "at-risk": "#92400e",
-  delayed: "#9f1239",
+  delayed: "#4338ca",
   "not-started": "#64748b",
 };
 
