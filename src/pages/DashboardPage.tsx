@@ -7,6 +7,7 @@ import { navigateTo } from "@/lib/navigation";
 import { describeError } from "@/lib/errors";
 import { useT } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
+import { APP_VERSION } from "@/lib/channel";
 import {
   analyzeSnapshot,
   deleteReport,
@@ -330,6 +331,10 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      <footer className="mx-auto max-w-7xl px-4 pb-6 text-xs text-slate-400 sm:px-6">
+        {t("app.version", { version: APP_VERSION })}
+      </footer>
 
       {quarterDialog && (
         <QuarterDialog
