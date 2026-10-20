@@ -97,6 +97,16 @@ Image name: `ghcr.io/<owner>/<repo>`, tagged `latest` (default branch), branch n
 
 Dependabot (`.github/dependabot.yml`) opens weekly update PRs against `dev` for npm, GitHub Actions and the Docker base images.
 
+### Versioning
+
+The app follows [semantic versioning](https://semver.org). The `version` in `package.json` is the only place it is set: it is built into the app and shown at the bottom of the dashboard. Production shows it as is (`0.2.0`), the dev build adds `-dev` (`0.2.0-dev`).
+
+To release:
+
+1. On `dev`, bump the version with `npm version minor --no-git-tag-version` (or `patch` / `major`), which updates `package.json` and `package-lock.json`, and commit.
+2. Merge `dev` into `main`.
+3. Tag the merge commit on `main` with the same version, e.g. `git tag v0.2.0 && git push origin v0.2.0`. CI checks that the tag matches `package.json` and publishes the Docker image tagged `0.2.0` and `0.2`.
+
 ### Production and dev deployments
 
 | Branch | GitHub Pages | Docker tag |

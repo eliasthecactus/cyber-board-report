@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 /** Fail the test on CSP violations or uncaught errors. */
@@ -130,4 +131,10 @@ test("importing a backup asks before replacing a different report for the same q
 
   await page.getByRole("button", { name: "Edit: Q4 2025" }).click();
   await expect(page.getByLabel("Report Title")).toHaveValue("Original");
+});
+
+test("shows the app version from package.json", async ({ page }) => {
+  const { version } = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
+  await page.goto("./");
+  await expect(page.getByText(`Version ${version}`, { exact: false })).toBeVisible();
 });
