@@ -24,8 +24,9 @@ import type {
  * 2 – threatLandscape / domain items became structured lists
  * 3 – schemaVersion stored on each report, hideEmptySlides added,
  *     unused Risk.historicalData dropped
+ * 4 – explainKpis and KPI.explanation added
  */
-export const REPORT_SCHEMA_VERSION = 3;
+export const REPORT_SCHEMA_VERSION = 4;
 
 export function createId(prefix = "report"): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -63,6 +64,7 @@ export function createEmptyReport({
     participants: [],
     showRiskMatrix: true,
     hideEmptySlides: false,
+    explainKpis: false,
     executiveSummary: "",
     executiveSummaryHighlight: "",
     topRisks: [],
@@ -171,6 +173,7 @@ function normalizeKpis(value: unknown): KPI[] {
     trend: oneOf(kpi.trend, DIRECTIONS, "stable"),
     targetValue: optionalNumber(kpi.targetValue),
     direction: oneOf(kpi.direction, ["higher", "lower"] as const, "higher"),
+    explanation: str(kpi.explanation),
     historicalData: normalizeHistory(kpi.historicalData),
   }));
 }
@@ -281,6 +284,7 @@ export function normalizeReport(input: Partial<Report> | Loose): Report {
       : [],
     showRiskMatrix: raw.showRiskMatrix !== false,
     hideEmptySlides: raw.hideEmptySlides === true,
+    explainKpis: raw.explainKpis === true,
     executiveSummary: str(raw.executiveSummary),
     executiveSummaryHighlight: str(raw.executiveSummaryHighlight),
     topRisks: normalizeRisks(raw.topRisks),

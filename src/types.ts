@@ -28,6 +28,8 @@ export interface KPI {
   trend: TrendDirection;
   targetValue?: number;
   direction?: "higher" | "lower"; // "higher" = better (training %), "lower" = better (MTTD, incidents)
+  /** What the KPI measures, shown on the explanation slide when `Report.explainKpis` is on. */
+  explanation?: string;
   historicalData: HistoricalKPI[];
 }
 
@@ -106,6 +108,8 @@ export interface Report {
   showRiskMatrix: boolean;
   /** When true, slides for sections without content are left out of preview and exports. */
   hideEmptySlides: boolean;
+  /** When true, a slide explaining each KPI is shown before the KPI slide. */
+  explainKpis: boolean;
   executiveSummary: string;
   executiveSummaryHighlight?: string; // Key callout/headline
   topRisks: Risk[];

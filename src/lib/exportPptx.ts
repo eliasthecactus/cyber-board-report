@@ -5,6 +5,7 @@ import { accentFor, SLIDE_HEIGHT, SLIDE_LIMITS, SLIDE_WIDTH, type Accent } from 
 import { visibleSlides, type SlideId } from "@/components/slides/slideRegistry";
 import { levelColor, matrixCell, matrixTone, palette, riskStatColor, riskTrendColor, statusColor } from "@/components/slides/palette";
 import { kpiSeries, trendColors } from "@/components/slides/slides/KPISlide";
+import { kpisToExplain } from "@/components/slides/slides/KPIExplanationsSlide";
 import { LEVELS, risksForSlide } from "@/components/slides/slides/TopRisksSlide";
 
 /*
@@ -362,6 +363,25 @@ function listSlide(ctx: Ctx, title: string, items: DomainItem[], emptyKey: "slid
   moreNote(ctx, slide, visible.length - shown.length, CONTENT_TOP + 3 * (cardH + 12));
 }
 
+function kpiExplanationsSlide(ctx: Ctx) {
+  const { t } = ctx;
+  const slide = frame(ctx, t("slide.kpiExplanations.title"));
+  const kpis = kpisToExplain(ctx.report);
+  if (kpis.length === 0) {
+    emptyNote(slide, t("slide.kpiExplanations.none"));
+    return;
+  }
+  const cardW = (CONTENT_W - 12) / 2;
+  const cardH = (CONTENT_BOTTOM - CONTENT_TOP - 24) / 3;
+  kpis.forEach((kpi, i) => {
+    const x = PAD_X + (i % 2) * (cardW + 12);
+    const y = CONTENT_TOP + Math.floor(i / 2) * (cardH + 12);
+    box(ctx, slide, x, y, cardW, cardH);
+    text(slide, kpi.name.toUpperCase(), x + 16, y + 14, cardW - 32, 18, { bold: true, fontSize: pt(12), color: c(palette.muted) });
+    text(slide, kpi.explanation ?? "", x + 16, y + 40, cardW - 32, cardH - 54, { fontSize: pt(15), color: c("#334155") });
+  });
+}
+
 function kpiSlide(ctx: Ctx) {
   const { report, t, pptx } = ctx;
   const slide = frame(ctx, t("ed.kpi.title"));
@@ -561,6 +581,7 @@ const BUILDERS: Record<SlideId, (ctx: Ctx) => void> = {
   executiveSummary: executiveSummarySlide,
   topRisks: topRisksSlide,
   threatLandscape: (ctx) => listSlide(ctx, ctx.t("slide.threat.title"), ctx.report.threatLandscape, "slide.threat.none", true),
+  kpiExplanations: kpiExplanationsSlide,
   kpis: kpiSlide,
   incidents: incidentsSlide,
   processItems: (ctx) => listSlide(ctx, ctx.t("slide.process.title"), ctx.report.processItems, "slide.domain.none", false),

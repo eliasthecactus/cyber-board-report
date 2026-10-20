@@ -9,7 +9,7 @@ The source of truth for the types is [`src/types.ts`](../src/types.ts); the
 code that validates and upgrades data is `normalizeReport` in
 [`src/lib/reportFactory.ts`](../src/lib/reportFactory.ts).
 
-## Report (`schemaVersion` 3)
+## Report (`schemaVersion` 4)
 
 | Field | Type | Notes |
 |---|---|---|
@@ -23,10 +23,11 @@ code that validates and upgrades data is `normalizeReport` in
 | `participants` | string[] | |
 | `showRiskMatrix` | boolean | Top-risks slide layout |
 | `hideEmptySlides` | boolean | Drop slides without content from preview and exports |
+| `explainKpis` | boolean | Add a slide before the KPIs with each KPI's `explanation` |
 | `executiveSummary`, `executiveSummaryHighlight` | string | |
 | `topRisks` | Risk[] | `likelihood`/`businessImpact`: `low` `medium` `high` `critical`; `trend`: `improving` `stable` `worsening` |
 | `threatLandscape`, `processItems`, `humanItems`, `technologyItems` | Item[] | `{ id, text, detail, trend: "more" \| "stable" \| "less" }`; items with empty `text` are dropped |
-| `kpis` | KPI[] | `value`, optional `targetValue`, `trend` (`up` `stable` `down`), `direction` (`higher` \| `lower` is better), `historicalData: { quarter: "Q1-2026", value }[]` |
+| `kpis` | KPI[] | `value`, optional `targetValue`, `trend` (`up` `stable` `down`), `direction` (`higher` \| `lower` is better), `explanation`, `historicalData: { quarter: "Q1-2026", value }[]` |
 | `incidents` | Incident[] | `severity` level plus free-text impact, outcome, lessons |
 | `initiatives` | Initiative[] | `status`: `on-track` `at-risk` `delayed` `not-started`; `progress` 0–100 |
 | `outlook` | string | |
@@ -71,6 +72,7 @@ what gets sent to a third party.
 | 1 | `threatLandscape` was one free-text string |
 | 2 | Threat landscape and domain sections became structured item lists |
 | 3 | `schemaVersion` stored on each report, `hideEmptySlides` added, editable `emergingRisks`, unused `Risk.historicalData` removed |
+| 4 | `explainKpis` and `KPI.explanation` added |
 
 To change the shape:
 
