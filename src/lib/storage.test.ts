@@ -61,6 +61,43 @@ describe("storage", () => {
     expect(settings.language).toBe("de");
   });
 
+  it("skips identical reports and asks about different ones for a taken quarter", async () => {
+    const storage = await loadStorage();
+    const same = normalizeReport({ id: "a", quarter: "Q1", year: 2026, title: "Same" });
+    const changed = normalizeReport({ id: "b", quarter: "Q2", year: 2026, title: "Old" });
+    await storage.saveReport(same);
+    await storage.saveReport(changed);
+
+    const payload = {
+      reports: [
+        { ...same, updatedAt: "2030-01-01T00:00:00.000Z" },
+        { ...changed, title: "New" },
+        { quarter: "Q3", year: 2026, title: "Fresh" },
+      ],
+    };
+    const conflicts = storage.findReportConflicts(payload, await storage.listReports());
+    expect(conflicts.map((c) => [c.index, c.quarter, c.existing.id])).toEqual([[1, "Q2", "b"]]);
+
+    const result = await storage.importSnapshotPayload(payload, storage.DEFAULT_SELECTION, { 1: "overwrite" });
+    expect(result).toMatchObject({ reportsImported: 2, reportsUnchanged: 1 });
+    const reports = await storage.listReports();
+    expect(reports).toHaveLength(3);
+    expect(reports.find((r) => r.id === "b")?.title).toBe("New");
+  });
+
+  it("can ignore or keep both reports for a taken quarter", async () => {
+    const storage = await loadStorage();
+    const existing = normalizeReport({ id: "a", quarter: "Q1", year: 2026, title: "Old" });
+    await storage.saveReport(existing);
+    const payload = { reports: [{ ...existing, title: "New" }] };
+
+    await storage.importSnapshotPayload(payload, storage.DEFAULT_SELECTION, { 0: "skip" });
+    expect((await storage.listReports()).map((r) => r.title)).toEqual(["Old"]);
+
+    await storage.importSnapshotPayload(payload, storage.DEFAULT_SELECTION, { 0: "keepBoth" });
+    expect((await storage.listReports()).map((r) => r.title).sort()).toEqual(["New", "Old"]);
+  });
+
   it("rejects non-image logos on import", async () => {
     const storage = await loadStorage();
     await storage.importSnapshotPayload(

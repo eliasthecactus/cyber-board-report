@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
@@ -30,6 +31,9 @@ export const CONTENT_SECURITY_POLICY = [
 const channel = process.env.VITE_APP_CHANNEL === "dev" ? "dev" : "prod";
 const appName = channel === "dev" ? "Cyber Board Reports (Dev)" : "Cyber Board Reports";
 
+/** package.json is the single source of the app version (see README, "Versioning"). */
+const { version } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
+
 /** Mark the dev build in the tab title. */
 function channelTitle(): Plugin {
   return {
@@ -55,6 +59,9 @@ function contentSecurityPolicy(): Plugin {
 
 export default defineConfig({
   base: "./",
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
   plugins: [
     react(),
     contentSecurityPolicy(),

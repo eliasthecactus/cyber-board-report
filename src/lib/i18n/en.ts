@@ -52,6 +52,14 @@ export const en = {
   "dashboard.quarterChanged": "Report moved to {quarter} {year}.",
   "dashboard.importedSettings": "Settings restored.",
   "dashboard.importFailed": "Import failed.",
+  "dashboard.importNothing": "Nothing was imported.",
+  "backup.conflictTitle": "Reports already exist",
+  "backup.conflictApplyAll": "For all:",
+  "backup.conflictExisting": "Existing report: last changed {date}",
+  "backup.conflictIncoming": "From the backup: last changed {date}",
+  "backup.conflict.overwrite": "Overwrite",
+  "backup.conflict.skip": "Ignore new",
+  "backup.conflict.keepBoth": "Keep both",
 
   // Backup export/import picker ---------------------------------------------
   "backup.exportTitle": "Export Backup",
@@ -516,6 +524,10 @@ export const en = {
   "dashboard.exportSlides": "Export slides",
   "dashboard.imported.one": "Imported 1 report.",
   "dashboard.imported.other": "Imported {count} reports.",
+  "dashboard.importUnchanged.one": "1 identical report was already there.",
+  "dashboard.importUnchanged.other": "{count} identical reports were already there.",
+  "backup.conflictDesc.one": "There is already a different report for this quarter. What should happen with the one from the backup?",
+  "backup.conflictDesc.other": "There are already different reports for {count} of these quarters. What should happen with the ones from the backup?",
   "backup.reportsCount.one": "1 report",
   "backup.reportsCount.other": "{count} reports",
   "backup.aiReview": "Review before importing",
@@ -594,6 +606,7 @@ export const en = {
   "settings.storagePersistent": "The browser has agreed to keep this app's data and not clear it automatically when space runs low.",
   "settings.storageBestEffort": "The browser may clear this app's data when disk space runs low. Request persistent storage and keep backups.",
   "settings.storageRequest": "Request persistent storage",
+  "app.version": "Cyber Board Reports · Version {version}",
   "channel.devBanner": "Development version – data here is separate from the production app and may be reset.",
 };
 

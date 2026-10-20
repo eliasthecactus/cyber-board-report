@@ -53,6 +53,14 @@ export const de: Record<TranslationKey, string> = {
   "dashboard.quarterChanged": "Bericht nach {quarter} {year} verschoben.",
   "dashboard.importedSettings": "Einstellungen wiederhergestellt.",
   "dashboard.importFailed": "Import fehlgeschlagen.",
+  "dashboard.importNothing": "Es wurde nichts importiert.",
+  "backup.conflictTitle": "Berichte existieren bereits",
+  "backup.conflictApplyAll": "Für alle:",
+  "backup.conflictExisting": "Vorhandener Bericht: zuletzt geändert {date}",
+  "backup.conflictIncoming": "Aus dem Backup: zuletzt geändert {date}",
+  "backup.conflict.overwrite": "Überschreiben",
+  "backup.conflict.skip": "Neuen ignorieren",
+  "backup.conflict.keepBoth": "Beide behalten",
 
   // Backup export/import picker
   "backup.exportTitle": "Backup exportieren",
@@ -536,6 +544,10 @@ export const de: Record<TranslationKey, string> = {
   "dashboard.exportSlides": "Folien exportieren",
   "dashboard.imported.one": "1 Bericht importiert.",
   "dashboard.imported.other": "{count} Berichte importiert.",
+  "dashboard.importUnchanged.one": "1 identischer Bericht war bereits vorhanden.",
+  "dashboard.importUnchanged.other": "{count} identische Berichte waren bereits vorhanden.",
+  "backup.conflictDesc.one": "Für dieses Quartal gibt es bereits einen anderen Bericht. Was soll mit dem Bericht aus dem Backup passieren?",
+  "backup.conflictDesc.other": "Für {count} dieser Quartale gibt es bereits andere Berichte. Was soll mit den Berichten aus dem Backup passieren?",
   "backup.reportsCount.one": "1 Bericht",
   "backup.reportsCount.other": "{count} Berichte",
   "backup.aiReview": "Vor dem Import prüfen",
@@ -614,5 +626,6 @@ export const de: Record<TranslationKey, string> = {
   "settings.storagePersistent": "Der Browser behält die Daten dieser App und löscht sie nicht automatisch bei Speicherknappheit.",
   "settings.storageBestEffort": "Der Browser kann die Daten dieser App bei knappem Speicherplatz löschen. Fordern Sie dauerhaften Speicher an und erstellen Sie Backups.",
   "settings.storageRequest": "Dauerhaften Speicher anfordern",
+  "app.version": "Cyber Board Reports · Version {version}",
   "channel.devBanner": "Entwicklungsversion – die Daten hier sind von der Produktivversion getrennt und können zurückgesetzt werden.",
 };

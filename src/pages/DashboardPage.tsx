@@ -7,15 +7,19 @@ import { navigateTo } from "@/lib/navigation";
 import { describeError } from "@/lib/errors";
 import { useT } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
+import { APP_VERSION } from "@/lib/channel";
 import {
   analyzeSnapshot,
   deleteReport,
+  findReportConflicts,
   getProfile,
   importSnapshotPayload,
   listReports,
   requestPersistentStorage,
   saveReport,
+  type ConflictResolution,
   type LocalProfile,
+  type ReportConflict,
   type SnapshotInfo,
   type SnapshotSelection,
 } from "@/lib/storage";
@@ -29,6 +33,7 @@ import { BackupExportDialog } from "@/components/dashboard/BackupExportDialog";
 import { BackupReminder, backupOverdue } from "@/components/dashboard/BackupReminder";
 import { ReportCard } from "@/components/dashboard/ReportCard";
 import { RowWarning, SelectionDialog } from "@/components/dashboard/SelectionDialog";
+import { ImportConflictDialog } from "@/components/dashboard/ImportConflictDialog";
 
 type QuarterDialogState =
   | { mode: "create" }
@@ -55,6 +60,11 @@ export default function DashboardPage() {
     payload: unknown;
     info: SnapshotInfo;
     selection: SnapshotSelection;
+  } | null>(null);
+  const [importConflicts, setImportConflicts] = useState<{
+    payload: unknown;
+    selection: SnapshotSelection;
+    conflicts: ReportConflict[];
   } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -180,25 +190,52 @@ export default function DashboardPage() {
 
   const handleImportConfirm = async () => {
     if (!importState) return;
+    const { payload, selection } = importState;
     try {
-      const result = await importSnapshotPayload(importState.payload, importState.selection);
-      if (result.settingsImported || result.profileImported) {
-        await reloadSettings();
+      // Reports for a quarter that already has a different report need a decision first.
+      const conflicts = selection.reports ? findReportConflicts(payload, await listReports()) : [];
+      if (conflicts.length > 0) {
+        setImportConflicts({ payload, selection, conflicts });
+        return;
       }
-      if (result.reportsImported > 0) {
-        void requestPersistentStorage();
-      }
-      const reportsMessage =
-        result.reportsImported > 0 ? t("dashboard.imported", { count: result.reportsImported }) : "";
-      const settingsMessage =
-        result.settingsImported || result.profileImported ? t("dashboard.importedSettings") : "";
-      setToast({ message: [reportsMessage, settingsMessage].filter(Boolean).join(" ") || t("dashboard.importFailed") });
-      await refresh();
+      await runImport(payload, selection);
     } catch (error) {
       showError(error);
     } finally {
       setImportState(null);
     }
+  };
+
+  const handleConflictsResolved = async (resolutions: Record<number, ConflictResolution>) => {
+    if (!importConflicts) return;
+    try {
+      await runImport(importConflicts.payload, importConflicts.selection, resolutions);
+    } catch (error) {
+      showError(error);
+    } finally {
+      setImportConflicts(null);
+    }
+  };
+
+  const runImport = async (
+    payload: unknown,
+    selection: SnapshotSelection,
+    resolutions?: Record<number, ConflictResolution>,
+  ) => {
+    const result = await importSnapshotPayload(payload, selection, resolutions);
+    if (result.settingsImported || result.profileImported) {
+      await reloadSettings();
+    }
+    if (result.reportsImported > 0) {
+      void requestPersistentStorage();
+    }
+    const messages = [
+      result.reportsImported > 0 ? t("dashboard.imported", { count: result.reportsImported }) : "",
+      result.reportsUnchanged > 0 ? t("dashboard.importUnchanged", { count: result.reportsUnchanged }) : "",
+      result.settingsImported || result.profileImported ? t("dashboard.importedSettings") : "",
+    ];
+    setToast({ message: messages.filter(Boolean).join(" ") || t("dashboard.importNothing") });
+    await refresh();
   };
 
   if (loading) {
@@ -294,6 +331,10 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      <footer className="mx-auto max-w-7xl px-4 pb-6 text-xs text-slate-400 sm:px-6">
+        {t("app.version", { version: APP_VERSION })}
+      </footer>
 
       {quarterDialog && (
         <QuarterDialog
@@ -394,6 +435,14 @@ export default function DashboardPage() {
           onCancel={() => setImportState(null)}
           onConfirm={() => void handleImportConfirm()}
           emptyLabel={t("backup.notAvailableImport")}
+        />
+      )}
+
+      {importConflicts && (
+        <ImportConflictDialog
+          conflicts={importConflicts.conflicts}
+          onCancel={() => setImportConflicts(null)}
+          onConfirm={(resolutions) => void handleConflictsResolved(resolutions)}
         />
       )}
 

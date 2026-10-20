@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 /** Fail the test on CSP violations or uncaught errors. */
@@ -97,4 +98,43 @@ test("KPI explanations get their own slide before the KPIs", async ({ page }) =>
   await expect(page.getByRole("button", { name: /Go to slide/ })).toHaveCount(3);
   await page.getByRole("button", { name: "Go to slide 2" }).click();
   await expect(page.getByText("Share of systems patched within 30 days.")).toBeVisible();
+});
+
+test("importing a backup asks before replacing a different report for the same quarter", async ({ page }) => {
+  await createReport(page, "Q4", "2025");
+  await page.getByLabel("Report Title").fill("Original");
+  await page.getByRole("button", { name: "Back to dashboard" }).click();
+
+  await page.getByRole("button", { name: "Backup", exact: true }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("dialog").getByRole("button", { name: "Export" }).click();
+  const backup = await (await download).path();
+
+  // Re-importing an identical report needs no decision.
+  const importFile = async () => {
+    await page.getByLabel("Import", { exact: true }).setInputFiles(backup);
+    await page.getByRole("dialog", { name: "Import Backup" }).getByRole("button", { name: "Import" }).click();
+  };
+  await importFile();
+  await expect(page.getByText("1 identical report was already there.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Edit: Q4 2025" }).click();
+  await page.getByLabel("Report Title").fill("Changed");
+  await page.getByRole("button", { name: "Back to dashboard" }).click();
+
+  await importFile();
+  const conflicts = page.getByRole("dialog", { name: "Reports already exist" });
+  await conflicts.getByLabel("Overwrite").check();
+  await conflicts.getByRole("button", { name: "Import" }).click();
+  await expect(page.getByText("Imported 1 report.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Q4 2025", exact: true })).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Edit: Q4 2025" }).click();
+  await expect(page.getByLabel("Report Title")).toHaveValue("Original");
+});
+
+test("shows the app version from package.json", async ({ page }) => {
+  const { version } = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
+  await page.goto("./");
+  await expect(page.getByText(`Version ${version}`, { exact: false })).toBeVisible();
 });
