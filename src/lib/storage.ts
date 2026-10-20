@@ -33,8 +33,23 @@ export interface AppSnapshot {
 
 export interface ImportResult {
   reportsImported: number;
+  /** Reports skipped because an identical one for the same quarter already exists. */
+  reportsUnchanged: number;
   profileImported: boolean;
   settingsImported: boolean;
+}
+
+/** What to do with an imported report whose quarter already has a report. */
+export type ConflictResolution = "overwrite" | "skip" | "keepBoth";
+
+/** An imported report whose quarter and year are already taken by a different report. */
+export interface ReportConflict {
+  /** Position of the report in the file, the key for its resolution. */
+  index: number;
+  quarter: string;
+  year: number;
+  existing: Report;
+  incoming: Report;
 }
 
 /** Which parts of a snapshot to export or import. */
@@ -413,9 +428,47 @@ export function analyzeSnapshot(payload: unknown): SnapshotInfo {
   };
 }
 
+/** Report content without the fields that change on every save or import. */
+function reportContent(report: Report): string {
+  return JSON.stringify({ ...report, id: "", createdAt: "", updatedAt: "" });
+}
+
+interface ReportMatch {
+  report: Report;
+  /** Existing report for the same quarter and year, if any. */
+  existing: Report | undefined;
+  /** True when a report with the same content already exists for that quarter. */
+  identical: boolean;
+}
+
+function matchReports(reports: unknown[], existing: Report[]): ReportMatch[] {
+  return reports.map((reportInput) => {
+    const report = normalizeReport(reportInput as Partial<Report>);
+    const sameQuarter = existing.filter((r) => r.quarter === report.quarter && r.year === report.year);
+    const content = reportContent(report);
+    return {
+      report,
+      existing: sameQuarter[0],
+      identical: sameQuarter.some((r) => reportContent(r) === content),
+    };
+  });
+}
+
+/**
+ * Reports in a file whose quarter already has a different report and so need
+ * a decision. Identical copies are not listed: importing them is skipped.
+ */
+export function findReportConflicts(payload: unknown, existing: Report[]): ReportConflict[] {
+  return matchReports(snapshotParts(payload).reports, existing).flatMap(({ report, existing: match, identical }, index) =>
+    match && !identical ? [{ index, quarter: report.quarter, year: report.year, existing: match, incoming: report }] : [],
+  );
+}
+
 export async function importSnapshotPayload(
   payload: unknown,
   selection: SnapshotSelection,
+  /** Per conflicting report (see `findReportConflicts`); unresolved ones are kept alongside. */
+  resolutions: Record<number, ConflictResolution> = {},
 ): Promise<ImportResult> {
   const { reports, settings: incoming, profile } = snapshotParts(payload);
 
@@ -426,14 +479,27 @@ export async function importSnapshotPayload(
   }
 
   let imported = 0;
+  let unchanged = 0;
   if (selection.reports && reports.length > 0) {
-    const existingIds = new Set((await listReports()).map((report) => report.id));
+    const existing = await listReports();
+    const existingIds = new Set(existing.map((report) => report.id));
     const now = new Date().toISOString();
-    const toSave = reports.map((reportInput) => {
-      const report = normalizeReport(reportInput as Partial<Report>);
+    const toSave = matchReports(reports, existing).flatMap(({ report, existing: match, identical }, index) => {
+      if (identical) {
+        unchanged += 1;
+        return [];
+      }
+      const resolution = match ? (resolutions[index] ?? "keepBoth") : "keepBoth";
+      if (resolution === "skip") {
+        return [];
+      }
+      if (resolution === "overwrite" && match) {
+        // Keep the existing id so open links and the dashboard entry stay the same.
+        return [{ ...report, id: match.id, updatedAt: now }];
+      }
       const reportId = existingIds.has(report.id) ? createId() : report.id;
       existingIds.add(reportId);
-      return { ...report, id: reportId, updatedAt: now };
+      return [{ ...report, id: reportId, updatedAt: now }];
     });
     await tx(REPORT_STORE, "readwrite", (t) => {
       const store = t.objectStore(REPORT_STORE);
@@ -487,7 +553,7 @@ export async function importSnapshotPayload(
     }
   }
 
-  return { reportsImported: imported, profileImported, settingsImported };
+  return { reportsImported: imported, reportsUnchanged: unchanged, profileImported, settingsImported };
 }
 
 function isReportLike(value: Record<string, unknown>): boolean {
