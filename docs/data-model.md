@@ -65,6 +65,11 @@ When importing, the user picks what to restore. AI settings (model and
 redaction rules) and the API key are **not** preselected, because they change
 what gets sent to a third party.
 
+A report for a quarter and year that already has a report is skipped when its
+content is identical (ignoring `id`, `createdAt` and `updatedAt`). Otherwise
+the user chooses per report to overwrite the existing one (its `id` is kept),
+ignore the imported one, or keep both.
+
 ## Versioning
 
 | Version | Change |
