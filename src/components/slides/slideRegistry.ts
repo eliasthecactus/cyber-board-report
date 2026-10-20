@@ -5,6 +5,7 @@ import ExecutiveSummarySlide from "./slides/ExecutiveSummarySlide";
 import TopRisksSlide from "./slides/TopRisksSlide";
 import ThreatLandscapeSlide from "./slides/ThreatLandscapeSlide";
 import KPISlide from "./slides/KPISlide";
+import KPIExplanationsSlide, { kpisToExplain } from "./slides/KPIExplanationsSlide";
 import IncidentsSlide from "./slides/IncidentsSlide";
 import ProcessSlide from "./slides/ProcessSlide";
 import HumanSlide from "./slides/HumanSlide";
@@ -19,6 +20,7 @@ export type SlideId =
   | "executiveSummary"
   | "topRisks"
   | "threatLandscape"
+  | "kpiExplanations"
   | "kpis"
   | "incidents"
   | "processItems"
@@ -33,6 +35,8 @@ export interface SlideDefinition {
   /** The editor section whose content this slide shows ("details" for the title slide). */
   section: ReportSection | "details";
   component: ComponentType<{ report: Report }>;
+  /** Optional slides are only part of the deck while this returns true. */
+  isEnabled?: (report: Report) => boolean;
   /** True when the section has nothing to show; such slides can be hidden. */
   isEmpty: (report: Report) => boolean;
   /** Items in the section vs. how many fit, when the slide shows a subset. */
@@ -65,6 +69,13 @@ export const SLIDES: readonly SlideDefinition[] = [
     component: ThreatLandscapeSlide,
     isEmpty: (r) => filled(r.threatLandscape).length === 0,
     capacity: (r) => ({ total: filled(r.threatLandscape).length, max: SLIDE_LIMITS.threats }),
+  },
+  {
+    id: "kpiExplanations",
+    section: "kpis",
+    component: KPIExplanationsSlide,
+    isEnabled: (r) => r.explainKpis,
+    isEmpty: (r) => kpisToExplain(r).length === 0,
   },
   {
     id: "kpis",
@@ -124,11 +135,14 @@ export const SLIDES: readonly SlideDefinition[] = [
   },
 ];
 
-/** The slides that make up this report's deck, honouring "hide empty slides". */
+/** The slides that make up this report's deck, honouring optional slides and "hide empty slides". */
 export function visibleSlides(report: Report): SlideDefinition[] {
-  return report.hideEmptySlides ? SLIDES.filter((slide) => !slide.isEmpty(report)) : [...SLIDES];
+  return SLIDES.filter(
+    (slide) => (slide.isEnabled?.(report) ?? true) && !(report.hideEmptySlides && slide.isEmpty(report)),
+  );
 }
 
+/** The main slide of a section, skipping optional extras such as the KPI explanations. */
 export function slideForSection(section: ReportSection | "details"): SlideDefinition | undefined {
-  return SLIDES.find((slide) => slide.section === section);
+  return SLIDES.find((slide) => slide.section === section && !slide.isEnabled);
 }
