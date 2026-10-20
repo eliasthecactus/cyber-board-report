@@ -43,7 +43,7 @@ export function sectionPatch(section: EditorSection, source: Report): Partial<Re
     case "threatLandscape":
       return { threatLandscape: withFreshIds(source.threatLandscape, "threat") };
     case "kpis":
-      return { kpis: withFreshIds(source.kpis, "kpi") };
+      return { kpis: withFreshIds(source.kpis, "kpi"), explainKpis: source.explainKpis };
     case "incidents":
       return { incidents: withFreshIds(source.incidents, "incident") };
     case "processItems":

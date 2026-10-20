@@ -4,6 +4,7 @@ import type { KPI, TrendDirection } from "@/types";
 import { createId, periodLabel } from "@/lib/reportFactory";
 import { useT } from "@/lib/i18n";
 import { NumberInput } from "@/components/ui/NumberInput";
+import { AiTextarea } from "@/components/ui/AiTextarea";
 
 interface KPIEditorProps {
   data: KPI[];
@@ -11,9 +12,19 @@ interface KPIEditorProps {
   /** The open report's quarter ("Q1") and year: its value is the KPI's current value. */
   reportQuarter: string;
   reportYear: number;
+  /** Adds a slide explaining each KPI before the KPI slide. */
+  explainKpis: boolean;
+  onExplainKpisChange: (value: boolean) => void;
 }
 
-export default function KPIEditor({ data, onUpdate, reportQuarter, reportYear }: KPIEditorProps) {
+export default function KPIEditor({
+  data,
+  onUpdate,
+  reportQuarter,
+  reportYear,
+  explainKpis,
+  onExplainKpisChange,
+}: KPIEditorProps) {
   const t = useT();
 
   const addKPI = () => {
@@ -24,6 +35,7 @@ export default function KPIEditor({ data, onUpdate, reportQuarter, reportYear }:
       value: 0,
       trend: "stable",
       direction: "higher",
+      explanation: "",
       historicalData: [],
     };
     onUpdate([...data, newKPI]);
@@ -42,12 +54,26 @@ export default function KPIEditor({ data, onUpdate, reportQuarter, reportYear }:
       <h2 className="text-lg font-semibold text-slate-900">{t("ed.kpi.title")}</h2>
       <p className="text-sm text-slate-500 mb-5">{t("ed.kpi.desc")}</p>
 
+      <label className="mb-5 flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <input
+          type="checkbox"
+          checked={explainKpis}
+          onChange={(e) => onExplainKpisChange(e.target.checked)}
+          className="h-4 w-4 shrink-0 accent-primary"
+        />
+        <span>
+          <span className="block text-sm font-medium text-slate-700">{t("ed.kpi.explainLabel")}</span>
+          <span className="block text-xs text-slate-500">{t("ed.kpi.explainDesc")}</span>
+        </span>
+      </label>
+
       <div className="flex flex-col gap-6 mb-4">
         {data.map((kpi) => (
           <KpiCard
             key={kpi.id}
             kpi={kpi}
             currentPeriod={periodLabel(reportQuarter, reportYear)}
+            showExplanation={explainKpis}
             onChange={(updates) => updateKPI(kpi.id, updates)}
             onDelete={() => deleteKPI(kpi.id)}
           />
@@ -66,11 +92,12 @@ export default function KPIEditor({ data, onUpdate, reportQuarter, reportYear }:
 interface KpiCardProps {
   kpi: KPI;
   currentPeriod: string;
+  showExplanation: boolean;
   onChange: (updates: Partial<KPI>) => void;
   onDelete: () => void;
 }
 
-function KpiCard({ kpi, currentPeriod, onChange, onDelete }: KpiCardProps) {
+function KpiCard({ kpi, currentPeriod, showExplanation, onChange, onDelete }: KpiCardProps) {
   const t = useT();
   const id = useId();
 
@@ -145,6 +172,20 @@ function KpiCard({ kpi, currentPeriod, onChange, onDelete }: KpiCardProps) {
           </select>
         </label>
       </div>
+
+      {showExplanation && (
+        <div className="mb-4">
+          <AiTextarea
+            aiLabel={t("ed.kpi.explanationLabel")}
+            aria-label={t("ed.kpi.explanationLabel")}
+            aiContext={kpi.name.trim() && `${t("ed.kpi.nameLabel")}: ${kpi.name.trim()}`}
+            placeholder={t("ed.kpi.explanationPlaceholder")}
+            value={kpi.explanation || ""}
+            onValueChange={(value) => onChange({ explanation: value })}
+            rows={2}
+          />
+        </div>
+      )}
 
       <div className="border-t border-slate-200 pt-4">
         <p id={`${id}-history`} className="text-xs font-semibold text-slate-500 mb-3">

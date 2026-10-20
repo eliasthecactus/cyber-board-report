@@ -19,6 +19,7 @@ The app is a client-only Vite/React single-page app. There is no backend, API se
 - Dashboard with create, duplicate, change quarter, delete (with undo), import and backup
 - Slide preview and full-screen presentation mode (arrow keys, Page Up/Down, Home/End)
 - Option to hide empty slides; the editor warns when a section has more items than fit on its slide
+- Optional KPI explanation slide before the KPIs, with a short explanation per KPI
 - Exports:
   - **PDF with selectable text** via the browser's print dialog: vector output, small files
   - **PDF image** (lossless, pixel-exact), downloaded directly

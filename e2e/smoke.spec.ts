@@ -81,3 +81,20 @@ test("dialogs are keyboard accessible", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
 });
+
+test("KPI explanations get their own slide before the KPIs", async ({ page }) => {
+  await createReport(page, "Q2", "2026");
+  await page.getByRole("button", { name: "KPIs", exact: true }).click();
+  await page.getByRole("button", { name: "Add KPI" }).click();
+  await page.getByLabel("KPI name").fill("Patch rate");
+  await expect(page.getByLabel("Explanation")).toHaveCount(0);
+
+  await page.getByLabel("Explain KPIs").check();
+  await page.getByLabel("Explanation").fill("Share of systems patched within 30 days.");
+
+  await page.getByRole("button", { name: "Preview" }).click();
+  await page.getByLabel("Hide empty slides").check();
+  await expect(page.getByRole("button", { name: /Go to slide/ })).toHaveCount(3);
+  await page.getByRole("button", { name: "Go to slide 2" }).click();
+  await expect(page.getByText("Share of systems patched within 30 days.")).toBeVisible();
+});

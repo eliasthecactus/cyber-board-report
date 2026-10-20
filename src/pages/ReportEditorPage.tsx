@@ -376,6 +376,8 @@ export default function ReportEditorPage({ reportId }: ReportEditorPageProps) {
                 onUpdate={(data) => handleSectionUpdate("kpis", data)}
                 reportQuarter={report.quarter}
                 reportYear={report.year}
+                explainKpis={report.explainKpis}
+                onExplainKpisChange={(value) => handlePatch({ explainKpis: value })}
               />
             )}
             {activeSection === "incidents" && (

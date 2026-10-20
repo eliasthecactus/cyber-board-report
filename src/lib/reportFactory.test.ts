@@ -11,6 +11,14 @@ describe("normalizeReport", () => {
     expect(report.emergingRisks).toEqual([]);
     expect(report.hideEmptySlides).toBe(false);
     expect(report.showRiskMatrix).toBe(true);
+    expect(report.explainKpis).toBe(false);
+  });
+
+  it("upgrades a schema 3 report without KPI explanations", () => {
+    const report = normalizeReport({ schemaVersion: 3, kpis: [{ name: "MTTD", value: 4 }] } as never);
+    expect(report.schemaVersion).toBe(REPORT_SCHEMA_VERSION);
+    expect(report.explainKpis).toBe(false);
+    expect(report.kpis[0].explanation).toBe("");
   });
 
   it("round-trips a valid report unchanged", () => {
