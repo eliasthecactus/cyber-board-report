@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CalendarDays, Copy, Download, Edit2, FileText, Loader2, Play, Trash2 } from "lucide-react";
+import { CalendarDays, Copy, Download, Edit2, FileText, LayoutDashboard, Loader2, Play, Trash2 } from "lucide-react";
 import type { Report } from "@/types";
 import { formatDateTime, useLanguage, useT } from "@/lib/i18n";
 import { navigateTo } from "@/lib/navigation";
@@ -89,6 +89,14 @@ export function ReportCard({
         >
           <Play size={14} aria-hidden />
           {t("dashboard.view")}
+        </button>
+        <button
+          className="cbr-btn cbr-btn-outline cbr-btn-sm"
+          onClick={() => navigateTo(`/brief/${encodeURIComponent(report.id)}`)}
+          aria-label={`${t("brief.name")}: ${label}`}
+        >
+          <LayoutDashboard size={14} aria-hidden />
+          {t("brief.name")}
         </button>
         {iconButton(t("dashboard.duplicate"), onDuplicate, <Copy size={14} aria-hidden />)}
         {iconButton(t("dashboard.changeQuarter"), onChangeQuarter, <CalendarDays size={14} aria-hidden />)}

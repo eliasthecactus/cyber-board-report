@@ -3,7 +3,8 @@ import { AlertTriangle, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { SlideFrame } from "../SlideFrame";
 import { SLIDE_LIMITS } from "../slideConstants";
-import { matrixCell, matrixTone, riskStatColor, riskTrendColor } from "../palette";
+import { riskStatColor, riskTrendColor } from "../palette";
+import { RiskMatrix } from "../RiskMatrix";
 
 interface TopRisksSlideProps {
   report: Report;
@@ -21,28 +22,24 @@ export function risksForSlide(report: Report): Risk[] {
   return [...report.topRisks].sort((a, b) => riskScore(b) - riskScore(a)).slice(0, max);
 }
 
-export const LEVELS: Level[] = ["low", "medium", "high", "critical"];
+/** The counts shown in the stats bar. */
+export function riskStats(report: Report): { critical: number; worsening: number; improving: number } {
+  return {
+    critical: report.topRisks.filter((r) => r.likelihood === "critical" || r.businessImpact === "critical").length,
+    worsening: report.topRisks.filter((r) => r.trend === "worsening").length,
+    improving: report.topRisks.filter((r) => r.trend === "improving").length,
+  };
+}
 
 export default function TopRisksSlide({ report }: TopRisksSlideProps) {
   const t = useT();
   const shownRisks = risksForSlide(report);
 
-  const criticalCount = report.topRisks.filter(
-    (r) => r.likelihood === "critical" || r.businessImpact === "critical",
-  ).length;
-  const worseningCount = report.topRisks.filter((r) => r.trend === "worsening").length;
-  const improvingCount = report.topRisks.filter((r) => r.trend === "improving").length;
-
-  const matrixHeaders = [
-    t("slide.risks.mLow"),
-    t("slide.risks.mMed"),
-    t("slide.risks.mHigh"),
-    t("slide.risks.mCrit"),
-  ];
+  const counts = riskStats(report);
   const stats = [
-    { label: t("slide.risks.critical"), value: criticalCount, color: riskStatColor.critical },
-    { label: t("slide.risks.worsening"), value: worseningCount, color: riskStatColor.worsening },
-    { label: t("slide.risks.improving"), value: improvingCount, color: riskStatColor.improving },
+    { label: t("slide.risks.critical"), value: counts.critical, color: riskStatColor.critical },
+    { label: t("slide.risks.worsening"), value: counts.worsening, color: riskStatColor.worsening },
+    { label: t("slide.risks.improving"), value: counts.improving, color: riskStatColor.improving },
   ];
 
   return (
@@ -101,59 +98,12 @@ export default function TopRisksSlide({ report }: TopRisksSlideProps) {
 
             {/* Risk matrix */}
             {report.showRiskMatrix && (
-            <div className="flex min-w-0 flex-col">
-              <h3 className="m-0 mb-2 text-[13px] font-bold uppercase tracking-wider text-slate-400">
-                {t("slide.risks.distribution")}
-              </h3>
-              <div className="flex gap-1.5">
-                <div className="relative flex w-4 items-center justify-center">
-                  <span
-                    className="absolute whitespace-nowrap text-[11px] font-bold uppercase tracking-wider text-slate-400"
-                    style={{ transform: "rotate(-90deg)", transformOrigin: "center center" }}
-                  >
-                    {t("ed.risks.likelihood")}
-                  </span>
-                </div>
-                <div className="flex flex-1 flex-col">
-                  <div className="grid grid-cols-5 gap-1 text-center">
-                    <div />
-                    {matrixHeaders.map((imp) => (
-                      <div key={imp} className="text-[11px] font-bold uppercase text-slate-400">
-                        {imp}
-                      </div>
-                    ))}
-                    {LEVELS.map((likelihood, row) => (
-                      <div key={likelihood} className="contents">
-                        <div className="flex items-center justify-end pr-1 text-[11px] font-bold uppercase text-slate-400">
-                          {matrixHeaders[row].charAt(0).toUpperCase()}
-                        </div>
-                        {LEVELS.map((impact) => {
-                          const count = report.topRisks.filter(
-                            (r) => r.likelihood === likelihood && r.businessImpact === impact,
-                          ).length;
-                          const tone = matrixCell[matrixTone(likelihood, impact)];
-                          return (
-                            <div
-                              key={`${likelihood}-${impact}`}
-                              className="flex h-[48px] items-center justify-center rounded text-[14px] font-semibold"
-                              style={{ backgroundColor: tone.bg, color: tone.fg }}
-                            >
-                              {count || ""}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-1.5 grid grid-cols-5">
-                    <div />
-                    <div className="col-span-4 text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                      {t("ed.risks.impact")}
-                    </div>
-                  </div>
-                </div>
+              <div className="flex min-w-0 flex-col">
+                <h3 className="m-0 mb-2 text-[13px] font-bold uppercase tracking-wider text-slate-400">
+                  {t("slide.risks.distribution")}
+                </h3>
+                <RiskMatrix risks={report.topRisks} />
               </div>
-            </div>
             )}
           </div>
         </div>

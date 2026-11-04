@@ -10,6 +10,7 @@ import { IS_DEV_CHANNEL } from "@/lib/channel";
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const ReportEditorPage = lazy(() => import("@/pages/ReportEditorPage"));
 const SlidesViewerPage = lazy(() => import("@/pages/SlidesViewerPage"));
+const BriefEditorPage = lazy(() => import("@/pages/BriefEditorPage"));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 
 export default function App() {
@@ -33,6 +34,9 @@ export default function App() {
       break;
     case "slides":
       page = <SlidesViewerPage key={route.id} reportId={route.id} />;
+      break;
+    case "brief":
+      page = <BriefEditorPage key={route.id} reportId={route.id} />;
       break;
     case "profile":
       page = <ProfilePage />;

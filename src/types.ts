@@ -18,6 +18,10 @@ export interface Risk {
   businessImpact: Impact;
   trend: Trend;
   description?: string;
+  /** What is being done about the risk. Shown in the board brief. */
+  mitigation?: string;
+  /** Person or role responsible. Shown in the board brief. */
+  owner?: string;
 }
 
 export interface KPI {
@@ -89,6 +93,84 @@ export interface EmergingRisk {
   impact: Level;
 }
 
+// Board brief ----------------------------------------------------------------
+// A short, freely laid out document per report. It stores layout and block
+// configuration only: blocks read their data from the report when rendered.
+
+/** Computed figures available to stat tiles. */
+export type BriefMetric =
+  | "criticalRisks"
+  | "worseningRisks"
+  | "improvingRisks"
+  | "totalRisks"
+  | "incidents"
+  | "seriousIncidents"
+  | "initiativesAtRisk"
+  | "kpisOffTarget"
+  | "openDecisions";
+
+export type BriefItemSource = "threatLandscape" | "processItems" | "humanItems" | "technologyItems";
+
+/** The options of each block type. An empty id list means "pick automatically". */
+export interface BriefBlockOptions {
+  text: { text: string };
+  headline: { source: "highlight" | "summary" };
+  stat: { metric: BriefMetric };
+  riskMatrix: Record<string, never>;
+  riskTable: {
+    count: number;
+    riskIds: string[];
+    showRatings: boolean;
+    showDescription: boolean;
+    showMitigation: boolean;
+    showOwner: boolean;
+  };
+  riskMovement: { showNew: boolean; showRemoved: boolean; showWorsened: boolean; showImproved: boolean };
+  kpis: { count: number; kpiIds: string[]; showChart: boolean; showTarget: boolean };
+  incidents: { count: number; minSeverity: Level; showOutcome: boolean };
+  initiatives: { count: number; filter: "all" | "needsAttention" };
+  items: { source: BriefItemSource; count: number; showDetail: boolean };
+  emergingRisks: { count: number };
+  outlook: Record<string, never>;
+  decisions: { count: number; showRationale: boolean };
+}
+
+export type BriefBlockType = keyof BriefBlockOptions;
+
+/** Position and size in grid cells. */
+export interface BriefRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface BriefBlockOf<T extends BriefBlockType> extends BriefRect {
+  id: string;
+  type: T;
+  /** Heading shown on the block. Empty = the translated default. */
+  title: string;
+  options: BriefBlockOptions[T];
+}
+
+export type BriefBlock = { [T in BriefBlockType]: BriefBlockOf<T> }[BriefBlockType];
+
+export interface BriefSlide {
+  id: string;
+  title: string;
+  blocks: BriefBlock[];
+}
+
+export interface Brief {
+  /** Shown in the footer. Empty = the translated default. */
+  title: string;
+  /** Who the brief is addressed to, shown above each slide title. */
+  audience: string;
+  /** Classification or similar, shown in the footer. */
+  footerNote: string;
+  slides: BriefSlide[];
+}
+
 export interface Report {
   /** Version of the report data shape; see docs/data-model.md. */
   schemaVersion: number;
@@ -123,6 +205,8 @@ export interface Report {
   outlook: string;
   emergingRisks: EmergingRisk[]; // Key risks for outlook
   decisionsRequired: Decision[];
+  /** The short board brief, or null while none has been created. */
+  brief: Brief | null;
 }
 
 // Application settings (language, AI assist, redaction) ---------------------

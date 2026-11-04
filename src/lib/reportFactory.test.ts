@@ -21,6 +21,46 @@ describe("normalizeReport", () => {
     expect(report.kpis[0].explanation).toBe("");
   });
 
+  it("upgrades a schema 4 report without a brief or risk owners", () => {
+    const report = normalizeReport({ schemaVersion: 4, topRisks: [{ name: "Ransomware" }] } as never);
+    expect(report.schemaVersion).toBe(REPORT_SCHEMA_VERSION);
+    expect(report.brief).toBeNull();
+    expect(report.topRisks[0].mitigation).toBe("");
+    expect(report.topRisks[0].owner).toBe("");
+  });
+
+  it("repairs a broken brief instead of passing it through", () => {
+    const report = normalizeReport({
+      brief: {
+        title: 5,
+        audience: "VR",
+        slides: [
+          {
+            title: "One",
+            blocks: [
+              { type: "stat", x: 99, y: -3, w: 1, h: 50, options: { metric: "nonsense", extra: true } },
+              { type: "riskTable", x: 0, y: 0, w: 4, h: 2, options: { count: 500, riskIds: ["a", 7], showOwner: "yes" } },
+              { type: "riskTable", x: 1, y: 1, w: 4, h: 2 },
+              { type: "unknown", x: 6, y: 6, w: 2, h: 2 },
+            ],
+          },
+        ],
+      },
+    } as never);
+    const blocks = report.brief?.slides[0].blocks ?? [];
+    expect(report.brief?.title).toBe("");
+    expect(report.brief?.audience).toBe("VR");
+    expect(blocks.map((block) => block.type)).toEqual(["stat", "riskTable"]);
+    expect(blocks[0]).toMatchObject({ x: 10, y: 0, w: 2, h: 8, options: { metric: "criticalRisks" } });
+    expect(blocks[0].options).not.toHaveProperty("extra");
+    expect(blocks[1].options).toMatchObject({ count: 12, riskIds: ["a"], showOwner: true });
+  });
+
+  it("treats a brief without slides as no brief", () => {
+    expect(normalizeReport({ brief: { slides: [] } } as never).brief).toBeNull();
+    expect(normalizeReport({ brief: "nonsense" } as never).brief).toBeNull();
+  });
+
   it("round-trips a valid report unchanged", () => {
     const report = createEmptyReport({ quarter: "Q2", year: 2026, createdBy: "Ana", id: "r1", now: "2026-04-01T00:00:00.000Z" });
     expect(normalizeReport(structuredClone(report))).toEqual(report);

@@ -6,7 +6,8 @@ import { visibleSlides, type SlideId } from "@/components/slides/slideRegistry";
 import { levelColor, matrixCell, matrixTone, palette, riskStatColor, riskTrendColor, statusColor } from "@/components/slides/palette";
 import { kpiSeries, trendColors } from "@/components/slides/slides/KPISlide";
 import { kpisToExplain } from "@/components/slides/slides/KPIExplanationsSlide";
-import { LEVELS, risksForSlide } from "@/components/slides/slides/TopRisksSlide";
+import { LEVELS } from "@/components/slides/RiskMatrix";
+import { risksForSlide } from "@/components/slides/slides/TopRisksSlide";
 
 /*
  * Native, editable PowerPoint export. Slides are laid out in the same pixel

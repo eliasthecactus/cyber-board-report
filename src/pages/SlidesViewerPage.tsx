@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Edit2, Loader2, Play, X } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Edit2, LayoutDashboard, Loader2, Play, X } from "lucide-react";
 import SlideRenderer from "@/components/slides/SlideRenderer";
 import { SlideStage } from "@/components/slides/SlideStage";
 import { visibleSlides } from "@/components/slides/slideRegistry";
@@ -171,6 +171,13 @@ export default function SlidesViewerPage({ reportId }: SlidesViewerPageProps) {
             >
               {exporting ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Download size={14} aria-hidden />}
               {exporting ? t("slidesView.exporting") : t("slidesView.export")}
+            </button>
+            <button
+              className="cbr-btn cbr-btn-ghost cbr-btn-sm"
+              onClick={() => navigateTo(`/brief/${encodeURIComponent(report.id)}`)}
+            >
+              <LayoutDashboard size={14} aria-hidden />
+              {t("brief.name")}
             </button>
             <button
               className="cbr-btn cbr-btn-ghost cbr-btn-sm"

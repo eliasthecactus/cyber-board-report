@@ -8,6 +8,7 @@ describe("parseRoute", () => {
     ["#/profile", { name: "profile" }],
     ["#/editor/report_1", { name: "editor", id: "report_1" }],
     ["#/slides/a%20b", { name: "slides", id: "a b" }],
+    ["#/brief/report_1", { name: "brief", id: "report_1" }],
     ["#/editor", { name: "not-found" }],
     ["#/profile/extra", { name: "not-found" }],
     ["#/unknown", { name: "not-found" }],

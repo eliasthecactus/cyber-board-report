@@ -26,6 +26,8 @@ export default function TopRisksEditor({
       businessImpact: "low",
       trend: "stable",
       description: "",
+      mitigation: "",
+      owner: "",
     };
     onUpdate([...data, newRisk]);
   };
@@ -150,6 +152,28 @@ export default function TopRisksEditor({
               onValueChange={(value) => updateRisk(risk.id, { description: value })}
               rows={2}
             />
+
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_200px]">
+              <AiTextarea
+                aiLabel={t("ed.risks.mitigationLabel")}
+                aria-label={t("ed.risks.mitigationLabel")}
+                aiContext={riskAiContext(risk)}
+                placeholder={t("ed.risks.mitigationPlaceholder")}
+                value={risk.mitigation || ""}
+                onValueChange={(value) => updateRisk(risk.id, { mitigation: value })}
+                rows={2}
+              />
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-slate-500">{t("ed.risks.ownerLabel")}</span>
+                <input
+                  type="text"
+                  placeholder={t("ed.risks.ownerPlaceholder")}
+                  value={risk.owner || ""}
+                  onChange={(e) => updateRisk(risk.id, { owner: e.target.value })}
+                  className="form-input form-input-sm"
+                />
+              </label>
+            </div>
           </div>
         ))}
       </div>

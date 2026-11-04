@@ -36,6 +36,6 @@ export function backupFilename(prefix = "cyber-board-reports"): string {
 }
 
 /** File name stem for a report's exports, e.g. "q3-2026-board-report". */
-export function reportFileStem(report: { quarter: string; year: number }): string {
-  return `${report.quarter}-${report.year}-board-report`.toLowerCase();
+export function reportFileStem(report: { quarter: string; year: number }, kind: "report" | "brief" = "report"): string {
+  return `${report.quarter}-${report.year}-board-${kind}`.toLowerCase();
 }
