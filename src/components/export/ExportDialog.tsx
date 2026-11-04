@@ -1,4 +1,4 @@
-import { FileText, Presentation, Printer } from "lucide-react";
+import { AlertTriangle, FileText, Presentation, Printer } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useT, type MessageKey } from "@/lib/i18n";
 import { Modal } from "@/components/ui/Modal";
@@ -7,6 +7,11 @@ import type { ExportFormat } from "./useReportExport";
 interface ExportDialogProps {
   /** Report label shown in the description, e.g. "Q3 2026". */
   reportLabel: string;
+  title?: string;
+  /** Formats to offer. Default: all. */
+  formats?: readonly ExportFormat[];
+  /** Problems the user should look at before exporting. */
+  warnings?: readonly string[];
   onCancel: () => void;
   onChoose: (format: ExportFormat) => void;
 }
@@ -17,12 +22,33 @@ const OPTIONS: { format: ExportFormat; Icon: LucideIcon; label: MessageKey; hint
   { format: "pptx", Icon: Presentation, label: "export.pptx", hint: "export.pptxHint" },
 ];
 
-export default function ExportDialog({ reportLabel, onCancel, onChoose }: ExportDialogProps) {
+export default function ExportDialog({
+  reportLabel,
+  title,
+  formats,
+  warnings = [],
+  onCancel,
+  onChoose,
+}: ExportDialogProps) {
   const t = useT();
+  const options = OPTIONS.filter((option) => !formats || formats.includes(option.format));
   return (
-    <Modal title={t("export.title")} description={t("export.desc", { report: reportLabel })} onClose={onCancel}>
+    <Modal title={title ?? t("export.title")} description={t("export.desc", { report: reportLabel })} onClose={onCancel}>
+      {warnings.length > 0 && (
+        <div role="status" className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <p className="mb-1 flex items-center gap-1.5 font-semibold">
+            <AlertTriangle size={14} aria-hidden />
+            {t("brief.warn.exportTitle")}
+          </p>
+          <ul className="m-0 list-disc pl-4">
+            {warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="flex flex-col gap-1.5">
-        {OPTIONS.map(({ format, Icon, label, hint }, index) => (
+        {options.map(({ format, Icon, label, hint }, index) => (
           <button
             key={format}
             type="button"

@@ -1,4 +1,7 @@
 import type {
+  Brief,
+  BriefBlock,
+  BriefBlockType,
   Decision,
   DomainItem,
   DomainTrend,
@@ -15,6 +18,7 @@ import type {
   Trend,
   TrendDirection,
 } from "@/types";
+import { BLOCK_SPECS, BRIEF_BLOCK_TYPES, canPlace, clampRect, MAX_BLOCK_ITEMS, MAX_BRIEF_SLIDES } from "@/lib/briefGrid";
 
 /**
  * Version of the report data shape. Bump it whenever the shape changes and
@@ -25,8 +29,9 @@ import type {
  * 3 – schemaVersion stored on each report, hideEmptySlides added,
  *     unused Risk.historicalData dropped
  * 4 – explainKpis and KPI.explanation added
+ * 5 – brief added, Risk.mitigation and Risk.owner added
  */
-export const REPORT_SCHEMA_VERSION = 4;
+export const REPORT_SCHEMA_VERSION = 5;
 
 export function createId(prefix = "report"): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -78,6 +83,7 @@ export function createEmptyReport({
     outlook: "",
     emergingRisks: [],
     decisionsRequired: [],
+    brief: null,
   };
 }
 
@@ -147,6 +153,8 @@ function normalizeRisks(value: unknown): Risk[] {
     businessImpact: oneOf(risk.businessImpact, LEVELS, "low"),
     trend: oneOf(risk.trend, RISK_TRENDS, "stable"),
     description: str(risk.description),
+    mitigation: str(risk.mitigation),
+    owner: str(risk.owner),
   }));
 }
 
@@ -254,6 +262,79 @@ function normalizeDecisions(value: unknown): Decision[] {
   }));
 }
 
+/** Keep only the option keys a block type knows, each with a valid value. */
+function normalizeBlockOptions(type: BriefBlockType, value: unknown): Loose {
+  const { options: defaults, enums } = BLOCK_SPECS[type];
+  const input = isObject(value) ? value : {};
+  const entries = Object.entries(defaults as Loose).map(([key, fallback]) => {
+    const raw = input[key];
+    if (Array.isArray(fallback)) {
+      return [key, Array.isArray(raw) ? raw.filter((item) => typeof item === "string") : []];
+    }
+    if (typeof fallback === "boolean") {
+      return [key, typeof raw === "boolean" ? raw : fallback];
+    }
+    if (typeof fallback === "number") {
+      return [key, Math.min(MAX_BLOCK_ITEMS, Math.max(1, Math.round(finiteNumber(raw, fallback))))];
+    }
+    const allowed = enums?.[key];
+    return [key, allowed ? oneOf(raw, allowed, fallback as string) : str(raw, fallback as string)];
+  });
+  return Object.fromEntries(entries);
+}
+
+function normalizeBlocks(value: unknown): BriefBlock[] {
+  const blocks: BriefBlock[] = [];
+  for (const raw of objects(value)) {
+    if (!BRIEF_BLOCK_TYPES.includes(raw.type as BriefBlockType)) {
+      continue;
+    }
+    const type = raw.type as BriefBlockType;
+    const rect = clampRect(
+      {
+        x: Math.round(finiteNumber(raw.x)),
+        y: Math.round(finiteNumber(raw.y)),
+        w: Math.round(finiteNumber(raw.w, BLOCK_SPECS[type].w)),
+        h: Math.round(finiteNumber(raw.h, BLOCK_SPECS[type].h)),
+      },
+      type,
+    );
+    // A hand-edited file can't make blocks overlap: the later one is dropped.
+    if (canPlace(rect, blocks)) {
+      blocks.push({
+        id: id(raw.id, "block"),
+        type,
+        ...rect,
+        title: str(raw.title),
+        options: normalizeBlockOptions(type, raw.options),
+      } as BriefBlock);
+    }
+  }
+  return blocks;
+}
+
+function normalizeBrief(value: unknown): Brief | null {
+  if (!isObject(value)) {
+    return null;
+  }
+  const slides = objects(value.slides)
+    .slice(0, MAX_BRIEF_SLIDES)
+    .map((slide) => ({
+      id: id(slide.id, "slide"),
+      title: str(slide.title),
+      blocks: normalizeBlocks(slide.blocks),
+    }));
+  if (slides.length === 0) {
+    return null;
+  }
+  return {
+    title: str(value.title),
+    audience: str(value.audience),
+    footerNote: str(value.footerNote),
+    slides,
+  };
+}
+
 function isIsoDate(value: unknown): value is string {
   return typeof value === "string" && !Number.isNaN(Date.parse(value));
 }
@@ -298,6 +379,7 @@ export function normalizeReport(input: Partial<Report> | Loose): Report {
     outlook: str(raw.outlook),
     emergingRisks: normalizeEmergingRisks(raw.emergingRisks),
     decisionsRequired: normalizeDecisions(raw.decisionsRequired),
+    brief: normalizeBrief(raw.brief),
   };
 }
 

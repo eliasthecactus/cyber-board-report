@@ -1,7 +1,8 @@
 import type { KPI, Report } from "@/types";
 import { TrendingUp, TrendingDown, Minus, BarChart3 } from "lucide-react";
-import { LineChart, Line, XAxis, CartesianGrid, ReferenceLine } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine } from "recharts";
 import { useT } from "@/lib/i18n";
+import { capitals } from "@/lib/utils";
 import { periodLabel } from "@/lib/reportFactory";
 import { SlideFrame } from "../SlideFrame";
 import { FixedChart } from "../FixedChart";
@@ -41,9 +42,93 @@ export function kpiSeries(kpi: KPI, report: Report): { quarter: string; value: n
     : [...history, { quarter: currentLabel, value: kpi.value }];
 }
 
-export default function KPISlide({ report }: KPISlideProps) {
+interface KpiTileProps {
+  kpi: KPI;
+  report: Report;
+  showChart?: boolean;
+  showTarget?: boolean;
+  /** Smaller type and padding, for the board brief. */
+  compact?: boolean;
+}
+
+export function KpiTile({ kpi, report, showChart = true, showTarget = true, compact = false }: KpiTileProps) {
   const t = useT();
   const accent = useAccent();
+  const plotData = kpiSeries(kpi, report);
+  const colors = trendColors(kpi);
+  const Icon = kpi.trend === "up" ? TrendingUp : kpi.trend === "down" ? TrendingDown : Minus;
+  // A compact chart is only a sparkline: at this height a scale from zero would look flat.
+  const scaleValues = [...plotData.map((point) => point.value), ...(kpi.targetValue === undefined ? [] : [kpi.targetValue])];
+  return (
+    <div className={`flex min-w-0 flex-col rounded-lg ${compact ? "bg-white p-2.5" : "bg-slate-50 p-3.5"}`}>
+      <div className="flex items-start justify-between gap-2">
+        <p className={`m-0 font-semibold text-slate-500 ${compact ? "text-[10px] tracking-wide" : "text-[12px] uppercase tracking-wider"}`}>
+          {compact ? capitals(kpi.name) : kpi.name}
+        </p>
+        <span
+          className={`flex shrink-0 items-center justify-center rounded-md ${compact ? "h-5 w-5" : "h-7 w-7"}`}
+          style={{ backgroundColor: colors.bg, color: colors.fg }}
+        >
+          <Icon size={compact ? 12 : 16} aria-hidden />
+        </span>
+      </div>
+      <div className="mt-1 flex items-baseline gap-1">
+        <span className={`font-bold text-slate-900 ${compact ? "text-[22px]" : "text-[30px]"}`}>{kpi.value}</span>
+        <span className={`text-slate-500 ${compact ? "text-[12px]" : "text-[14px]"}`}>{kpi.unit}</span>
+        {showTarget && kpi.targetValue !== undefined && (
+          <span className={`ml-auto self-center text-slate-500 ${compact ? "text-[11px]" : "text-[12px]"}`}>
+            {t("slide.kpi.target", { value: kpi.targetValue })}
+          </span>
+        )}
+      </div>
+      {showChart && plotData.length >= 2 && (
+        <div className="mt-auto">
+          <FixedChart height={compact ? 44 : 60}>
+            {(width) => (
+              <LineChart
+                width={width}
+                height={compact ? 44 : 60}
+                data={plotData}
+                margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+              >
+                {compact ? (
+                  <YAxis hide domain={[Math.min(...scaleValues), Math.max(...scaleValues)]} />
+                ) : (
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.border} vertical={false} />
+                )}
+                <XAxis
+                  hide={compact}
+                  dataKey="quarter"
+                  tick={{ fontSize: 9, fill: palette.faint }}
+                  interval="preserveStartEnd"
+                />
+                {kpi.targetValue !== undefined && (
+                  <ReferenceLine
+                    y={kpi.targetValue}
+                    stroke={palette.faint}
+                    strokeDasharray="4 4"
+                    strokeWidth={1}
+                  />
+                )}
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke={accent.text}
+                  strokeWidth={2}
+                  dot={{ fill: accent.text, r: 2.5 }}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            )}
+          </FixedChart>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function KPISlide({ report }: KPISlideProps) {
+  const t = useT();
   const kpis = report.kpis.slice(0, SLIDE_LIMITS.kpis);
 
   return (
@@ -52,72 +137,9 @@ export default function KPISlide({ report }: KPISlideProps) {
         <p className="text-[15px] italic text-slate-400">{t("slide.kpi.none")}</p>
       ) : (
         <div className="grid h-full grid-cols-3 grid-rows-2 gap-3">
-          {kpis.map((kpi) => {
-            const plotData = kpiSeries(kpi, report);
-            const colors = trendColors(kpi);
-            const Icon = kpi.trend === "up" ? TrendingUp : kpi.trend === "down" ? TrendingDown : Minus;
-            return (
-              <div key={kpi.id} className="flex min-w-0 flex-col rounded-lg bg-slate-50 p-3.5">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="m-0 text-[12px] font-semibold uppercase tracking-wider text-slate-500">
-                    {kpi.name}
-                  </p>
-                  <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
-                    style={{ backgroundColor: colors.bg, color: colors.fg }}
-                  >
-                    <Icon size={16} aria-hidden />
-                  </span>
-                </div>
-                <div className="mt-1 flex items-baseline gap-1">
-                  <span className="text-[30px] font-bold text-slate-900">{kpi.value}</span>
-                  <span className="text-[14px] text-slate-500">{kpi.unit}</span>
-                  {kpi.targetValue !== undefined && (
-                    <span className="ml-auto self-center text-[12px] text-slate-500">
-                      {t("slide.kpi.target", { value: kpi.targetValue })}
-                    </span>
-                  )}
-                </div>
-                {plotData.length >= 2 && (
-                  <div className="mt-auto">
-                    <FixedChart height={60}>
-                      {(width) => (
-                        <LineChart
-                          width={width}
-                          height={60}
-                          data={plotData}
-                          margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke={palette.border} vertical={false} />
-                          <XAxis
-                            dataKey="quarter"
-                            tick={{ fontSize: 9, fill: palette.faint }}
-                            interval="preserveStartEnd"
-                          />
-                          {kpi.targetValue !== undefined && (
-                            <ReferenceLine
-                              y={kpi.targetValue}
-                              stroke={palette.faint}
-                              strokeDasharray="4 4"
-                              strokeWidth={1}
-                            />
-                          )}
-                          <Line
-                            type="monotone"
-                            dataKey="value"
-                            stroke={accent.text}
-                            strokeWidth={2}
-                            dot={{ fill: accent.text, r: 2.5 }}
-                            isAnimationActive={false}
-                          />
-                        </LineChart>
-                      )}
-                    </FixedChart>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {kpis.map((kpi) => (
+            <KpiTile key={kpi.id} kpi={kpi} report={report} />
+          ))}
         </div>
       )}
     </SlideFrame>

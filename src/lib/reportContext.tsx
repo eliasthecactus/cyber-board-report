@@ -43,7 +43,9 @@ export function serializeReportForAi(report: Report): string {
         report.topRisks.map(
           (risk) =>
             `${risk.name} (likelihood: ${risk.likelihood}, impact: ${risk.businessImpact}, trend: ${risk.trend})` +
-            (risk.description ? ` — ${risk.description}` : ""),
+            (risk.description ? ` — ${risk.description}` : "") +
+            (risk.mitigation ? ` [mitigation: ${risk.mitigation}]` : "") +
+            (risk.owner ? ` [owner: ${risk.owner}]` : ""),
         ),
       )}`,
     );

@@ -4,6 +4,7 @@ export type AppRoute =
   | { name: "dashboard" }
   | { name: "editor"; id: string }
   | { name: "slides"; id: string }
+  | { name: "brief"; id: string }
   | { name: "profile" }
   | { name: "not-found" };
 
@@ -29,6 +30,10 @@ export function parseRoute(hash: string): AppRoute {
 
   if (segments[0] === "slides" && segments[1]) {
     return { name: "slides", id: decodeURIComponent(segments[1]) };
+  }
+
+  if (segments[0] === "brief" && segments[1]) {
+    return { name: "brief", id: decodeURIComponent(segments[1]) };
   }
 
   return { name: "not-found" };

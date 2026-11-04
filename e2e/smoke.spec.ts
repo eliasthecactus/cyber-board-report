@@ -54,6 +54,57 @@ test("create, edit, preview and export a report", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("build a board brief from report data, rearrange it and export it", async ({ page }) => {
+  const errors = watchForErrors(page);
+  await createReport(page);
+
+  await page.getByRole("button", { name: "Top Risks" }).click();
+  await page.getByRole("button", { name: "Add Risk" }).click();
+  await page.getByLabel("Risk name").fill("Ransomware exposure");
+  await page.getByLabel("Mitigation").fill("Offline backups");
+  await page.getByRole("button", { name: "Back to dashboard" }).click();
+
+  await page.getByRole("button", { name: "Board brief: Q3 2026" }).click();
+  await expect(page).toHaveURL(/#\/brief\//);
+  await page.getByRole("button", { name: /default template/ }).click();
+
+  // Data blocks show the report's data.
+  const canvas = page.getByRole("group", { name: /Slide \d layout/ });
+  await expect(canvas.getByRole("cell", { name: "Ransomware exposure" })).toBeVisible();
+  await expect(canvas.getByRole("cell", { name: "Offline backups" })).toBeVisible();
+
+  // Add a slide with a block of your own and move it with the keyboard.
+  await page.getByRole("button", { name: "Add slide" }).click();
+  await page.getByRole("button", { name: "Free text" }).click();
+  await page.getByLabel("Text", { exact: true }).fill("Assessment by the CISO");
+  const block = canvas.getByRole("button", { name: "Free text", exact: true });
+  await block.press("ArrowRight");
+  await block.press("Shift+ArrowDown");
+  await expect(page.getByText("Saved").first()).toBeVisible();
+
+  await page.reload();
+  await page.getByRole("button", { name: "Go to slide 4" }).click();
+  await expect(canvas.getByText("Assessment by the CISO")).toBeVisible();
+
+  // The vector PDF goes through the print dialog, which can't run in a test.
+  await page.evaluate(() => {
+    window.print = () => {
+      document.body.dataset.printedSlides = String(document.querySelectorAll(".print-slide").length);
+    };
+  });
+  await page.getByRole("button", { name: "Export" }).click();
+  await page.getByRole("button", { name: /selectable text/ }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-printed-slides", "4");
+
+  await page.getByRole("button", { name: "Export" }).click();
+  await expect(page.getByRole("button", { name: /PowerPoint/ })).toHaveCount(0);
+  const pdfDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: /PDF image/ }).click();
+  expect((await pdfDownload).suggestedFilename()).toBe("q3-2026-board-brief.pdf");
+
+  expect(errors).toEqual([]);
+});
+
 test("edits survive a reload and deletes can be undone", async ({ page }) => {
   await createReport(page, "Q1", "2027");
   await page.getByLabel("Report Title").fill("Resilience review");

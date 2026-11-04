@@ -29,16 +29,31 @@ const offscreen = {
   pointerEvents: "none",
 } as const;
 
+/** What to export: the slides of the report's deck unless a caller supplies its own. */
+export interface ExportSource {
+  slideCount: number;
+  renderSlide: (index: number) => ReactNode;
+  fileStem: string;
+}
+
+function deckSource(report: Report): ExportSource {
+  return {
+    slideCount: visibleSlides(report).length,
+    renderSlide: (index) => <SlideRenderer report={report} slideIndex={index} />,
+    fileStem: reportFileStem(report),
+  };
+}
+
 /**
  * Vector PDF through the browser's print dialog ("Save as PDF"): text stays
  * selectable and searchable, charts stay sharp, and files are small.
  */
 async function printSlides(
-  report: Report,
-  mount: (report: Report) => void,
+  source: ExportSource,
+  mount: (source: ExportSource) => void,
   getRoot: () => HTMLElement | null,
 ) {
-  flushSync(() => mount(report));
+  flushSync(() => mount(source));
   const root = getRoot();
   if (!root) {
     return;
@@ -46,7 +61,7 @@ async function printSlides(
   await waitForSlideReady(root);
   const previousTitle = document.title;
   // Browsers use the document title as the suggested file name.
-  document.title = reportFileStem(report);
+  document.title = source.fileStem;
   document.documentElement.classList.add("printing-slides");
   try {
     window.print();
@@ -57,17 +72,17 @@ async function printSlides(
 }
 
 /**
- * Shared export logic for the dashboard and the slide viewer. Returns the
- * `host` element, which must be rendered by the page: it holds the hidden
- * slides that are captured (image PDF) or printed (vector PDF).
+ * Shared export logic for the dashboard, the slide viewer and the brief editor.
+ * Returns the `host` element, which must be rendered by the page: it holds the
+ * hidden slides that are captured (image PDF) or printed (vector PDF).
  */
 export function useReportExport(onError: (error: unknown) => void) {
   const t = useT();
   const lang = useLanguage();
   const { settings } = useSettings();
   const [state, setState] = useState<ExportState | null>(null);
-  const [imageSlide, setImageSlide] = useState<{ report: Report; index: number } | null>(null);
-  const [printReport, setPrintReport] = useState<Report | null>(null);
+  const [imageSlide, setImageSlide] = useState<ReactNode>(null);
+  const [printSource, setPrintSource] = useState<ExportSource | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -75,8 +90,9 @@ export function useReportExport(onError: (error: unknown) => void) {
   const cancel = useCallback(() => abortRef.current?.abort(), []);
 
   const start = useCallback(
-    async (report: Report, format: ExportFormat) => {
-      const total = visibleSlides(report).length;
+    async (report: Report, format: ExportFormat, customSource?: ExportSource) => {
+      const source = customSource ?? deckSource(report);
+      const total = source.slideCount;
       setState({ reportId: report.id, format, done: 0, total });
       const controller = new AbortController();
       abortRef.current = controller;
@@ -84,20 +100,20 @@ export function useReportExport(onError: (error: unknown) => void) {
       try {
         if (format === "pptx") {
           const blob = await buildPptx(report, settings, t, lang);
-          downloadBlob(`${reportFileStem(report)}.pptx`, blob);
+          downloadBlob(`${source.fileStem}.pptx`, blob);
         } else if (format === "pdf-print") {
-          await printSlides(report, setPrintReport, () => printRef.current);
+          await printSlides(source, setPrintSource, () => printRef.current);
         } else {
           const blob = await buildImagePdf({
             slideCount: total,
             signal: controller.signal,
             onProgress: (done) => setState((current) => (current ? { ...current, done } : current)),
             renderSlide: async (index) => {
-              flushSync(() => setImageSlide({ report, index }));
+              flushSync(() => setImageSlide(source.renderSlide(index)));
               return hostRef.current?.firstElementChild as HTMLElement | null;
             },
           });
-          downloadBlob(`${reportFileStem(report)}.pdf`, blob);
+          downloadBlob(`${source.fileStem}.pdf`, blob);
         }
       } catch (error) {
         if (!(error instanceof ExportCancelledError)) {
@@ -107,25 +123,24 @@ export function useReportExport(onError: (error: unknown) => void) {
       } finally {
         abortRef.current = null;
         setImageSlide(null);
-        setPrintReport(null);
+        setPrintSource(null);
         setState(null);
       }
     },
     [settings, t, lang, onError],
   );
 
-  const slideCount = printReport ? visibleSlides(printReport).length : 0;
   const host: ReactNode = (
     <>
       <div ref={hostRef} aria-hidden style={offscreen}>
-        {imageSlide && <SlideRenderer report={imageSlide.report} slideIndex={imageSlide.index} />}
+        {imageSlide}
       </div>
-      {printReport &&
+      {printSource &&
         createPortal(
           <div ref={printRef} className="print-root" aria-hidden>
-            {Array.from({ length: slideCount }, (_, index) => (
+            {Array.from({ length: printSource.slideCount }, (_, index) => (
               <div key={index} className="print-slide">
-                <SlideRenderer report={printReport} slideIndex={index} />
+                {printSource.renderSlide(index)}
               </div>
             ))}
           </div>,

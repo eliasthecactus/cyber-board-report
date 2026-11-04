@@ -20,6 +20,7 @@ The app is a client-only Vite/React single-page app. There is no backend, API se
 - Slide preview and full-screen presentation mode (arrow keys, Page Up/Down, Home/End)
 - Option to hide empty slides; the editor warns when a section has more items than fit on its slide
 - Optional KPI explanation slide before the KPIs, with a short explanation per KPI
+- **Board brief**: a short PDF for the board of directors, built in a visual editor. Arrange blocks such as the risk heat map, top risks with mitigation and owner, risk movement since the previous quarter, key figures, KPIs and decisions on up to 5 slides. Blocks show the report's data and update with it. A new brief starts from a 3-slide template or from the previous quarter's brief
 - Exports:
   - **PDF with selectable text** via the browser's print dialog: vector output, small files
   - **PDF image** (lossless, pixel-exact), downloaded directly
@@ -144,8 +145,9 @@ Setup (already done for this repository): set the Pages source to **GitHub Actio
 
 ```text
 src/
-├── pages/                  # Dashboard, editor, slide viewer, settings
+├── pages/                  # Dashboard, editor, slide viewer, brief editor, settings
 ├── components/
+│   ├── brief/              # Board brief: block registry, blocks, canvas, properties
 │   ├── dashboard/          # Report cards, backup dialogs, backup reminder
 │   ├── editors/            # One editor per report section
 │   ├── export/             # Export dialog, progress, useReportExport hook
@@ -154,6 +156,7 @@ src/
 ├── lib/
 │   ├── storage.ts          # IndexedDB persistence, backup/import
 │   ├── reportFactory.ts    # Report creation, validation and schema upgrades
+│   ├── brief*.ts           # Board brief: templates, grid logic, computed figures
 │   ├── useAutosave.ts      # Debounced autosave that never drops edits
 │   ├── openrouter.ts       # AI requests and redaction
 │   ├── exportPdf.ts        # Image PDF export

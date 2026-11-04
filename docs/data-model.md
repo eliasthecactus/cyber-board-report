@@ -9,7 +9,7 @@ The source of truth for the types is [`src/types.ts`](../src/types.ts); the
 code that validates and upgrades data is `normalizeReport` in
 [`src/lib/reportFactory.ts`](../src/lib/reportFactory.ts).
 
-## Report (`schemaVersion` 4)
+## Report (`schemaVersion` 5)
 
 | Field | Type | Notes |
 |---|---|---|
@@ -25,7 +25,7 @@ code that validates and upgrades data is `normalizeReport` in
 | `hideEmptySlides` | boolean | Drop slides without content from preview and exports |
 | `explainKpis` | boolean | Add a slide before the KPIs with each KPI's `explanation` |
 | `executiveSummary`, `executiveSummaryHighlight` | string | |
-| `topRisks` | Risk[] | `likelihood`/`businessImpact`: `low` `medium` `high` `critical`; `trend`: `improving` `stable` `worsening` |
+| `topRisks` | Risk[] | `likelihood`/`businessImpact`: `low` `medium` `high` `critical`; `trend`: `improving` `stable` `worsening`; `mitigation`, `owner` are free text shown in the board brief |
 | `threatLandscape`, `processItems`, `humanItems`, `technologyItems` | Item[] | `{ id, text, detail, trend: "more" \| "stable" \| "less" }`; items with empty `text` are dropped |
 | `kpis` | KPI[] | `value`, optional `targetValue`, `trend` (`up` `stable` `down`), `direction` (`higher` \| `lower` is better), `explanation`, `historicalData: { quarter: "Q1-2026", value }[]` |
 | `incidents` | Incident[] | `severity` level plus free-text impact, outcome, lessons |
@@ -33,10 +33,50 @@ code that validates and upgrades data is `normalizeReport` in
 | `outlook` | string | |
 | `emergingRisks` | `{ description, impact }[]` | Shown under the outlook |
 | `decisionsRequired` | `{ id, title, rationale, impact }[]` | |
+| `brief` | Brief \| `null` | The board brief, see [Board brief](#board-brief); `null` until one is created |
 
 Unknown fields are dropped, and invalid values (wrong enum, `NaN`, wrong type)
 are replaced with defaults. A hand-edited file therefore can't break the
 slides; at worst a field comes back empty.
+
+## Board brief
+
+A short document per report, arranged from blocks on up to 5 slides. It stores
+layout and block settings only: blocks read their data from the report when
+they are rendered, so editing the report updates the brief.
+
+| Field | Type | Notes |
+|---|---|---|
+| `title` | string | Footer title; empty means the default |
+| `audience` | string | Shown above each slide title |
+| `footerNote` | string | Classification, shown in the footer |
+| `slides` | `{ id, title, blocks }[]` | 1 to 5 slides |
+
+Each block is `{ id, type, x, y, w, h, title, options }`. Position and size are
+cells of a 12 × 8 grid (`src/lib/briefGrid.ts`). An empty `title` means the
+default heading. `options` depend on the block `type`:
+
+| `type` | `options` |
+|---|---|
+| `text` | `text` |
+| `headline` | `source`: `highlight` \| `summary` |
+| `stat` | `metric`: see `BriefMetric` in `src/types.ts` |
+| `riskMatrix`, `outlook` | none |
+| `riskTable` | `count`, `riskIds`, `showRatings`, `showDescription`, `showMitigation`, `showOwner` |
+| `riskMovement` | `showNew`, `showRemoved`, `showWorsened`, `showImproved` |
+| `kpis` | `count`, `kpiIds`, `showChart`, `showTarget` |
+| `incidents` | `count`, `minSeverity`, `showOutcome` |
+| `initiatives` | `count`, `filter`: `all` \| `needsAttention` |
+| `items` | `source`: `threatLandscape` \| `processItems` \| `humanItems` \| `technologyItems`, `count`, `showDetail` |
+| `emergingRisks` | `count` |
+| `decisions` | `count`, `showRationale` |
+
+Empty `riskIds` or `kpiIds` mean automatic selection. Ids don't survive copying
+between quarters, so risks and KPIs are matched by name there, and risk movement
+compares by name with the previous report.
+
+When loading, blocks of unknown types are dropped, positions are clamped to the
+grid and a block that overlaps an earlier one is dropped.
 
 ## Backup file
 
@@ -78,6 +118,7 @@ ignore the imported one, or keep both.
 | 2 | Threat landscape and domain sections became structured item lists |
 | 3 | `schemaVersion` stored on each report, `hideEmptySlides` added, editable `emergingRisks`, unused `Risk.historicalData` removed |
 | 4 | `explainKpis` and `KPI.explanation` added |
+| 5 | `brief` added, `Risk.mitigation` and `Risk.owner` added |
 
 To change the shape:
 
