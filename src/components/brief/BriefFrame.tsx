@@ -22,6 +22,9 @@ interface BriefFrameProps {
 /** Not `truncate`: the image export mismeasures spaced text and would cut it off with an ellipsis. */
 const oneLine = "overflow-hidden whitespace-nowrap";
 
+/** The period and the logo sit side by side, so they share one shape. */
+const headerChip = "flex h-[34px] items-center rounded-[10px] border border-brief-line px-3";
+
 /** The page around a brief slide: title, period, logo, classification and page position. */
 export function BriefFrame({ report, title, eyebrow, footerTitle, footerNote, children }: BriefFrameProps) {
   const theme = useBriefTheme();
@@ -52,13 +55,13 @@ export function BriefFrame({ report, title, eyebrow, footerTitle, footerNote, ch
           </h2>
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          <span className="rounded-full border border-brief-line bg-brief-tile px-3.5 py-1.5 text-[13px] font-semibold tabular-nums text-brief-ink">
+          <span className={`${headerChip} bg-brief-tile text-[13px] font-semibold tabular-nums text-brief-ink`}>
             {report.quarter} {report.year}
           </span>
           {settings.logo && (
             // A white plate, because a logo may be dark or light and has to work on both themes.
-            <span className="flex h-[34px] items-center rounded-lg bg-white px-2.5">
-              <img src={settings.logo} alt="" className="max-h-[24px] max-w-[120px] object-contain" data-slide-image />
+            <span className={`${headerChip} bg-white`}>
+              <img src={settings.logo} alt="" className="max-h-[22px] max-w-[120px] object-contain" data-slide-image />
             </span>
           )}
         </div>
