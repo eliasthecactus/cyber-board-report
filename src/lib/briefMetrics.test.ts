@@ -1,7 +1,20 @@
 import { describe, expect, it } from "vitest";
 import type { KPI, Level, Report, Risk } from "@/types";
 import { BLOCK_SPECS } from "./briefGrid";
-import { compareRisks, isOffTarget, metricValue, selectIncidents, selectInitiatives, selectKpis, selectRisks } from "./briefMetrics";
+import {
+  compareRisks,
+  isOffTarget,
+  metricPolarity,
+  metricTotal,
+  metricValue,
+  rankedRisks,
+  riskBands,
+  scoreBand,
+  selectIncidents,
+  selectInitiatives,
+  selectKpis,
+  selectRisks,
+} from "./briefMetrics";
 import { createEmptyReport } from "./reportFactory";
 
 const risk = (name: string, likelihood: Level, businessImpact: Level, patch: Partial<Risk> = {}): Risk => ({
@@ -149,5 +162,60 @@ describe("block selections", () => {
     expect(
       selectInitiatives({ ...empty(), initiatives }, { ...defaults, filter: "needsAttention" }).map((i) => i.id),
     ).toEqual(["late"]);
+  });
+});
+
+describe("stat tiles", () => {
+  it("knows which way is good for each figure", () => {
+    expect(metricPolarity("criticalRisks")).toBe("lowerIsBetter");
+    expect(metricPolarity("improvingRisks")).toBe("higherIsBetter");
+    expect(metricPolarity("openDecisions")).toBe("neutral");
+  });
+
+  it("gives the whole a figure is part of", () => {
+    const report: Report = {
+      ...empty(),
+      topRisks: [risk("A", "high", "high"), risk("B", "low", "low")],
+      kpis: [kpi({ targetValue: 90 }), kpi({})],
+    };
+    expect(metricTotal("criticalRisks", report)).toBe(2);
+    // A KPI without a target can't be off target, so it doesn't count.
+    expect(metricTotal("kpisOffTarget", report)).toBe(1);
+    expect(metricTotal("openDecisions", report)).toBeNull();
+  });
+});
+
+describe("risk bands", () => {
+  it("splits the score range into four bands", () => {
+    expect([2, 3, 4, 5, 6, 7, 8].map(scoreBand)).toEqual([
+      "low",
+      "low",
+      "medium",
+      "medium",
+      "high",
+      "critical",
+      "critical",
+    ]);
+  });
+
+  it("counts every risk in exactly one band", () => {
+    const report: Report = {
+      ...empty(),
+      topRisks: [risk("A", "critical", "critical"), risk("B", "high", "high"), risk("C", "low", "low"), risk("D", "low", "medium")],
+    };
+    expect(riskBands(report)).toEqual({ critical: 1, high: 1, medium: 0, low: 2 });
+  });
+});
+
+describe("risk numbers", () => {
+  it("stay the same when a table shows only some of the risks", () => {
+    const report: Report = {
+      ...empty(),
+      topRisks: [risk("Low", "low", "low"), risk("Top", "critical", "critical"), risk("Mid", "medium", "medium")],
+    };
+    const ranked = rankedRisks(report);
+    expect(ranked.map((item) => item.name)).toEqual(["Top", "Mid", "Low"]);
+    const [picked] = selectRisks(report, { ...BLOCK_SPECS.riskTable.options, riskIds: ["Low"] });
+    expect(ranked.indexOf(picked)).toBe(2);
   });
 });

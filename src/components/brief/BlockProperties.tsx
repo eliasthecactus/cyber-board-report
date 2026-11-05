@@ -40,10 +40,10 @@ function Field({
       );
     case "toggle":
       return (
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-white/80">
           <input
             type="checkbox"
-            className="h-4 w-4 accent-primary"
+            className="h-4 w-4 accent-white"
             checked={value as boolean}
             onChange={(event) => onOption(field.key, event.target.checked)}
           />
@@ -53,7 +53,7 @@ function Field({
     case "count":
       return (
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500">{t(field.label)}</span>
+          <span className="text-xs font-medium text-white/55">{t(field.label)}</span>
           <NumberInput
             className="form-input form-input-sm"
             min={1}
@@ -66,7 +66,7 @@ function Field({
     case "select":
       return (
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500">{t(field.label)}</span>
+          <span className="text-xs font-medium text-white/55">{t(field.label)}</span>
           <select
             className="form-input form-input-sm"
             value={value as string}
@@ -88,13 +88,13 @@ function Field({
       }
       return (
         <fieldset className="m-0 border-0 p-0">
-          <legend className="mb-1 p-0 text-xs font-medium text-slate-500">{t(field.label)}</legend>
+          <legend className="mb-1 p-0 text-xs font-medium text-white/55">{t(field.label)}</legend>
           <div className="flex max-h-44 flex-col gap-1 overflow-y-auto">
             {items.map((item) => (
-              <label key={item.id} className="flex cursor-pointer items-start gap-2 text-sm text-slate-700">
+              <label key={item.id} className="flex cursor-pointer items-start gap-2 text-sm text-white/80">
                 <input
                   type="checkbox"
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-white"
                   checked={picked.includes(item.id)}
                   onChange={(event) =>
                     onOption(
@@ -107,7 +107,7 @@ function Field({
               </label>
             ))}
           </div>
-          <p className="mb-0 mt-1 text-xs text-slate-500">{t(field.hint)}</p>
+          <p className="mb-0 mt-1 text-xs text-white/50">{t(field.hint)}</p>
         </fieldset>
       );
     }
@@ -123,13 +123,13 @@ export function BlockProperties({ block, report, onChange, onDelete }: BlockProp
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="m-0 flex items-center gap-2 text-sm font-bold text-slate-900">
+      <h2 className="m-0 flex items-center gap-2 text-sm font-semibold text-white">
         <Icon size={15} aria-hidden />
         {t(definition.label)}
       </h2>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-slate-500">{t("brief.props.heading")}</span>
+        <span className="text-xs font-medium text-white/55">{t("brief.props.heading")}</span>
         <input
           type="text"
           className="form-input form-input-sm"

@@ -29,6 +29,18 @@
   --font-heading: "Noto Sans Display", system-ui, sans-serif;
 }
 
+/* The board brief's colours are set per theme on its root element, see brief/theme.ts. */
+@theme inline {
+  --color-brief-ink: var(--brief-ink);
+  --color-brief-body: var(--brief-body);
+  --color-brief-muted: var(--brief-muted);
+  --color-brief-faint: var(--brief-faint);
+  --color-brief-tile: var(--brief-tile);
+  --color-brief-raised: var(--brief-raised);
+  --color-brief-line: var(--brief-line);
+  --color-brief-accent: var(--brief-accent);
+}
+
 /* ── Fonts ────────────────────────────────────────────────────────────────── */
 
 @font-face {
@@ -45,6 +57,15 @@
   font-weight: 100 900;
   font-stretch: 62.5% 100%;
   font-style: italic;
+  font-display: swap;
+}
+
+/* Numbers and headings of the board brief. Latin subset; other glyphs fall back to Noto. */
+@font-face {
+  font-family: "Geist";
+  src: url("../assets/fonts/Geist-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
   font-display: swap;
 }
 
@@ -204,6 +225,64 @@ textarea.form-input {
   padding: 0.375rem;
   width: 2rem;
   height: 2rem;
+}
+
+/* ── Board brief editor ───────────────────────────────────────────────────── */
+
+/* A dark studio around the slide. Dialogs are portalled out of it and stay light. */
+.brief-studio {
+  color-scheme: dark;
+  background: #07090e;
+  color: rgb(255 255 255 / 0.85);
+  font-family: "Geist", var(--font-display);
+}
+.brief-studio .form-input {
+  border-color: rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.05);
+  color: white;
+  box-shadow: none;
+}
+.brief-studio .form-input::placeholder {
+  color: rgb(255 255 255 / 0.35);
+}
+.brief-studio .form-input:focus {
+  border-color: rgb(255 255 255 / 0.5);
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.08);
+}
+.brief-studio .cbr-btn:focus-visible,
+.brief-studio .form-input:focus-visible {
+  outline-color: white;
+}
+.brief-studio .cbr-btn-ghost {
+  color: rgb(255 255 255 / 0.65);
+}
+.brief-studio .cbr-btn-ghost:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: white;
+}
+.brief-studio .cbr-btn-outline {
+  border-color: rgb(255 255 255 / 0.14);
+  background: transparent;
+  color: rgb(255 255 255 / 0.85);
+  box-shadow: none;
+}
+.brief-studio .cbr-btn-outline:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+.brief-studio .cbr-btn-primary {
+  background: white;
+  color: #07090e;
+}
+.brief-studio .cbr-btn-primary:hover {
+  background: rgb(255 255 255 / 0.85);
+}
+.brief-studio .cbr-btn-danger {
+  border-color: rgb(248 113 113 / 0.3);
+  background: rgb(248 113 113 / 0.1);
+  color: #fca5a5;
+}
+.brief-studio .cbr-btn-danger:hover {
+  background: rgb(248 113 113 / 0.18);
 }
 
 /* ── Screen-reader only ───────────────────────────────────────────────────── */

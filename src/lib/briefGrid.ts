@@ -79,6 +79,7 @@ export const BLOCK_SPECS: { [T in BriefBlockType]: BlockSpec<T> } = {
     minH: 2,
     options: { showNew: true, showRemoved: true, showWorsened: true, showImproved: true },
   },
+  riskTrend: { w: 4, h: 4, minW: 3, minH: 3, options: {} },
   kpis: {
     w: 6,
     h: 3,
@@ -120,6 +121,8 @@ export const BLOCK_SPECS: { [T in BriefBlockType]: BlockSpec<T> } = {
     options: { count: 4, showRationale: true },
   },
 };
+
+export const BRIEF_THEMES = ["midnight", "daylight"] as const;
 
 export const BRIEF_BLOCK_TYPES = Object.keys(BLOCK_SPECS) as BriefBlockType[];
 

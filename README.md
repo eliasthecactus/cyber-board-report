@@ -20,7 +20,7 @@ The app is a client-only Vite/React single-page app. There is no backend, API se
 - Slide preview and full-screen presentation mode (arrow keys, Page Up/Down, Home/End)
 - Option to hide empty slides; the editor warns when a section has more items than fit on its slide
 - Optional KPI explanation slide before the KPIs, with a short explanation per KPI
-- **Board brief**: a short PDF for the board of directors, built in a visual editor. Arrange blocks such as the risk heat map, top risks with mitigation and owner, risk movement since the previous quarter, key figures, KPIs and decisions on up to 5 slides. Blocks show the report's data and update with it. A new brief starts from a 3-slide template or from the previous quarter's brief
+- **Board brief**: a short PDF for the board of directors, built in a visual editor. Arrange blocks such as the risk heat map, top risks with mitigation and owner, risk movement since the previous quarter, risk development over the last quarters, key figures with trend lines, KPIs and decisions on up to 5 slides. It has its own design, in a dark look for screens and a light one for paper. Blocks show the report's data and update with it. A new brief starts from a 3-slide template or from the previous quarter's brief
 - Exports:
   - **PDF with selectable text** via the browser's print dialog: vector output, small files
   - **PDF image** (lossless, pixel-exact), downloaded directly

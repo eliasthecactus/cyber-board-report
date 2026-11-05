@@ -43,6 +43,69 @@ export function metricValue(metric: BriefMetric, report: Report): number {
   }
 }
 
+/** Whether a rising figure is bad news, good news, or neither. */
+export type MetricPolarity = "lowerIsBetter" | "higherIsBetter" | "neutral";
+
+export function metricPolarity(metric: BriefMetric): MetricPolarity {
+  switch (metric) {
+    case "criticalRisks":
+    case "worseningRisks":
+    case "seriousIncidents":
+    case "initiativesAtRisk":
+    case "kpisOffTarget":
+      return "lowerIsBetter";
+    case "improvingRisks":
+      return "higherIsBetter";
+    case "totalRisks":
+    case "incidents":
+    case "openDecisions":
+      return "neutral";
+  }
+}
+
+/** What a stat tile's value is a part of, e.g. 3 critical risks of 7. Null when it stands alone. */
+export function metricTotal(metric: BriefMetric, report: Report): number | null {
+  switch (metric) {
+    case "criticalRisks":
+    case "worseningRisks":
+    case "improvingRisks":
+      return report.topRisks.length;
+    case "seriousIncidents":
+      return report.incidents.length;
+    case "initiativesAtRisk":
+      return report.initiatives.length;
+    case "kpisOffTarget":
+      return report.kpis.filter((kpi) => kpi.targetValue !== undefined).length;
+    case "totalRisks":
+    case "incidents":
+    case "openDecisions":
+      return null;
+  }
+}
+
+/**
+ * The brief's four-step rating of a score from 2 to 8. It is deliberately
+ * sharper than the deck's heat map, where most cells are red: a chart of it
+ * has to show a difference between quarters.
+ */
+export function scoreBand(score: number): Level {
+  return score >= 7 ? "critical" : score === 6 ? "high" : score >= 4 ? "medium" : "low";
+}
+
+/** How many risks of the report fall in each band. */
+export function riskBands(report: Report): Record<Level, number> {
+  const bands: Record<Level, number> = { critical: 0, high: 0, medium: 0, low: 0 };
+  for (const risk of report.topRisks) {
+    bands[scoreBand(riskScore(risk))] += 1;
+  }
+  return bands;
+}
+
+/** All risks, highest score first. A risk's position here is its number in the brief. */
+export function rankedRisks(report: Report): Risk[] {
+  return [...report.topRisks].sort((a, b) => riskScore(b) - riskScore(a));
+}
+
 export interface RiskChange {
   name: string;
   /** Sum of likelihood and impact rank before and now; null when absent. */
@@ -90,8 +153,8 @@ export function compareRisks(current: readonly Risk[], prior: readonly Risk[]): 
 /** The risks of a table block: the hand-picked ones, or else the top N by score. */
 export function selectRisks(report: Report, options: BriefBlockOptions["riskTable"]): Risk[] {
   const picked = report.topRisks.filter((risk) => options.riskIds.includes(risk.id));
-  const source = picked.length > 0 ? picked : report.topRisks;
-  return [...source].sort((a, b) => riskScore(b) - riskScore(a)).slice(0, options.count);
+  const ranked = rankedRisks(report);
+  return (picked.length > 0 ? ranked.filter((risk) => picked.includes(risk)) : ranked).slice(0, options.count);
 }
 
 /** The KPIs of a block: the hand-picked ones, or else the first N. */

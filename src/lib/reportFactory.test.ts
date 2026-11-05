@@ -29,6 +29,13 @@ describe("normalizeReport", () => {
     expect(report.topRisks[0].owner).toBe("");
   });
 
+  it("upgrades a schema 5 brief to the default look and keeps a chosen one", () => {
+    const brief = { title: "", audience: "", footerNote: "", slides: [{ id: "s", title: "Lage", blocks: [] }] };
+    expect(normalizeReport({ schemaVersion: 5, brief } as never).brief?.theme).toBe("midnight");
+    expect(normalizeReport({ brief: { ...brief, theme: "daylight" } } as never).brief?.theme).toBe("daylight");
+    expect(normalizeReport({ brief: { ...brief, theme: "neon" } } as never).brief?.theme).toBe("midnight");
+  });
+
   it("repairs a broken brief instead of passing it through", () => {
     const report = normalizeReport({
       brief: {

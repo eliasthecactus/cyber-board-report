@@ -18,7 +18,15 @@ import type {
   Trend,
   TrendDirection,
 } from "@/types";
-import { BLOCK_SPECS, BRIEF_BLOCK_TYPES, canPlace, clampRect, MAX_BLOCK_ITEMS, MAX_BRIEF_SLIDES } from "@/lib/briefGrid";
+import {
+  BLOCK_SPECS,
+  BRIEF_BLOCK_TYPES,
+  BRIEF_THEMES,
+  canPlace,
+  clampRect,
+  MAX_BLOCK_ITEMS,
+  MAX_BRIEF_SLIDES,
+} from "@/lib/briefGrid";
 
 /**
  * Version of the report data shape. Bump it whenever the shape changes and
@@ -30,8 +38,9 @@ import { BLOCK_SPECS, BRIEF_BLOCK_TYPES, canPlace, clampRect, MAX_BLOCK_ITEMS, M
  *     unused Risk.historicalData dropped
  * 4 – explainKpis and KPI.explanation added
  * 5 – brief added, Risk.mitigation and Risk.owner added
+ * 6 – Brief.theme and the riskTrend block added
  */
-export const REPORT_SCHEMA_VERSION = 5;
+export const REPORT_SCHEMA_VERSION = 6;
 
 export function createId(prefix = "report"): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -331,6 +340,7 @@ function normalizeBrief(value: unknown): Brief | null {
     title: str(value.title),
     audience: str(value.audience),
     footerNote: str(value.footerNote),
+    theme: oneOf(value.theme, BRIEF_THEMES, "midnight"),
     slides,
   };
 }

@@ -73,6 +73,10 @@ test("build a board brief from report data, rearrange it and export it", async (
   await expect(canvas.getByRole("cell", { name: "Ransomware exposure" })).toBeVisible();
   await expect(canvas.getByRole("cell", { name: "Offline backups" })).toBeVisible();
 
+  // The look can be changed for the whole brief and is kept.
+  await page.getByRole("radio", { name: /Daylight/ }).check({ force: true });
+  await expect(page.getByText("Saved").first()).toBeVisible();
+
   // Add a slide with a block of your own and move it with the keyboard.
   await page.getByRole("button", { name: "Add slide" }).click();
   await page.getByRole("button", { name: "Free text" }).click();
@@ -85,6 +89,7 @@ test("build a board brief from report data, rearrange it and export it", async (
   await page.reload();
   await page.getByRole("button", { name: "Go to slide 4" }).click();
   await expect(canvas.getByText("Assessment by the CISO")).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Daylight/ })).toBeChecked();
 
   // The vector PDF goes through the print dialog, which can't run in a test.
   await page.evaluate(() => {

@@ -1,11 +1,15 @@
 import { useLayoutEffect, useRef, type ComponentType, type ReactNode, type Ref } from "react";
 import type { Brief, BriefBlock, BriefBlockType, Report } from "@/types";
 import { useT } from "@/lib/i18n";
+import { withAlpha } from "@/lib/color";
 import { capitals } from "@/lib/utils";
 import { BRIEF_COLS, BRIEF_GAP, BRIEF_ROWS } from "@/lib/briefGrid";
-import { SlideFrame, SlidePageContext } from "@/components/slides/SlideFrame";
+import { useSettings } from "@/lib/settings";
+import { SlidePageContext } from "@/components/slides/SlideFrame";
 import { blockDefinition, blockHeading } from "./blockRegistry";
+import { BriefFrame } from "./BriefFrame";
 import type { BlockProps } from "./blocks/shared";
+import { BriefThemeContext, heroVars, resolveTheme, useBriefTheme } from "./theme";
 
 export const gridTemplate = {
   gridTemplateColumns: `repeat(${BRIEF_COLS}, minmax(0, 1fr))`,
@@ -16,17 +20,20 @@ export const gridTemplate = {
 interface BlockFrameProps {
   block: BriefBlock;
   report: Report;
-  prior: Report | null;
+  earlier: readonly Report[];
   chrome?: ReactNode;
   onOverflow?: (blockId: string, overflowing: boolean) => void;
 }
 
-function BlockFrame({ block, report, prior, chrome, onOverflow }: BlockFrameProps) {
+function BlockFrame({ block, report, earlier, chrome, onOverflow }: BlockFrameProps) {
   const t = useT();
+  const theme = useBriefTheme();
   const bodyRef = useRef<HTMLDivElement>(null);
   const definition = blockDefinition(block);
   const Content = definition.component as unknown as ComponentType<BlockProps<BriefBlockType>>;
   const heading = blockHeading(block, t);
+  const hero = definition.surface === "hero";
+  const Icon = definition.Icon;
 
   // No dependencies on purpose: any change of data, options or size can affect the fit.
   useLayoutEffect(() => {
@@ -54,12 +61,29 @@ function BlockFrame({ block, report, prior, chrome, onOverflow }: BlockFrameProp
     >
       <div
         ref={bodyRef}
-        className={`h-full overflow-hidden rounded-lg ${definition.surface === "card" ? "bg-slate-50 px-3 py-2" : ""}`}
+        className={`relative flex h-full flex-col overflow-hidden rounded-[14px] px-4 py-3 ${
+          hero ? "" : "border border-brief-line bg-brief-tile"
+        }`}
+        style={
+          hero
+            ? {
+                ...heroVars(theme),
+                color: "var(--brief-body)",
+                backgroundColor: theme.heroFill,
+                backgroundImage: `linear-gradient(115deg, ${withAlpha(theme.heroInk, 0.12)}, ${withAlpha(theme.heroInk, 0)} 55%)`,
+              }
+            : undefined
+        }
       >
         {heading && (
-          <h3 className="m-0 mb-1 text-[11px] font-bold tracking-wider text-slate-500">{capitals(heading)}</h3>
+          <h3 className="m-0 mb-2 flex shrink-0 items-center gap-1.5 text-[10.5px] font-semibold tracking-[0.1em] text-brief-muted">
+            <Icon size={13} className="text-brief-accent" aria-hidden />
+            {capitals(heading)}
+          </h3>
         )}
-        <Content block={block} report={report} prior={prior} />
+        <div className="min-h-0 flex-1">
+          <Content block={block} report={report} prior={earlier.at(-1) ?? null} earlier={earlier} />
+        </div>
       </div>
       {chrome}
     </div>
@@ -68,7 +92,8 @@ function BlockFrame({ block, report, prior, chrome, onOverflow }: BlockFrameProp
 
 interface BriefSlideViewProps {
   report: Report;
-  prior: Report | null;
+  /** Earlier reports, oldest first, for comparisons and trends. */
+  earlier: readonly Report[];
   brief: Brief;
   slideIndex: number;
   /** Editor only: the grid element, for converting pointer movement to cells. */
@@ -83,7 +108,7 @@ interface BriefSlideViewProps {
 /** One slide of the brief. The editor and both PDF exports all render this. */
 export function BriefSlideView({
   report,
-  prior,
+  earlier,
   brief,
   slideIndex,
   gridRef,
@@ -92,36 +117,38 @@ export function BriefSlideView({
   onOverflow,
 }: BriefSlideViewProps) {
   const t = useT();
+  const { settings } = useSettings();
   const slide = brief.slides[slideIndex];
   if (!slide) {
     return null;
   }
   return (
-    <SlidePageContext.Provider value={{ page: slideIndex + 1, total: brief.slides.length }}>
-      <SlideFrame
-        report={report}
-        variant="compact"
-        title={slide.title}
-        eyebrow={brief.audience}
-        footerTitle={brief.title.trim() || t("brief.defaultTitle")}
-        footerNote={brief.footerNote}
-      >
-        <div className="relative h-full">
-          {underlay}
-          <div ref={gridRef} className="relative grid h-full" style={gridTemplate}>
-            {slide.blocks.map((block) => (
-              <BlockFrame
-                key={block.id}
-                block={block}
-                report={report}
-                prior={prior}
-                chrome={renderChrome?.(block)}
-                onOverflow={onOverflow}
-              />
-            ))}
+    <BriefThemeContext.Provider value={resolveTheme(brief.theme, settings.primaryColor)}>
+      <SlidePageContext.Provider value={{ page: slideIndex + 1, total: brief.slides.length }}>
+        <BriefFrame
+          report={report}
+          title={slide.title}
+          eyebrow={brief.audience}
+          footerTitle={brief.title.trim() || t("brief.defaultTitle")}
+          footerNote={brief.footerNote}
+        >
+          <div className="relative h-full">
+            {underlay}
+            <div ref={gridRef} className="relative grid h-full" style={gridTemplate}>
+              {slide.blocks.map((block) => (
+                <BlockFrame
+                  key={block.id}
+                  block={block}
+                  report={report}
+                  earlier={earlier}
+                  chrome={renderChrome?.(block)}
+                  onOverflow={onOverflow}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </SlideFrame>
-    </SlidePageContext.Provider>
+        </BriefFrame>
+      </SlidePageContext.Provider>
+    </BriefThemeContext.Provider>
   );
 }

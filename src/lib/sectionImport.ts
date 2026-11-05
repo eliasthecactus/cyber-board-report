@@ -9,6 +9,14 @@ export function isEarlier(a: Report, current: Report): boolean {
   return quarterNumber(a.quarter) < quarterNumber(current.quarter);
 }
 
+/** Up to `limit` reports before `current`, oldest first. The last one is the previous quarter. */
+export function earlierReports(reports: Report[], current: Report, limit = 5): Report[] {
+  return reports
+    .filter((r) => r.id !== current.id && isEarlier(r, current))
+    .sort((a, b) => (a.year !== b.year ? a.year - b.year : quarterNumber(a.quarter) - quarterNumber(b.quarter)))
+    .slice(-limit);
+}
+
 /** The most recent report before `current`, used as the "import from" source. */
 export function findPriorReport(reports: Report[], current: Report): Report | null {
   return (

@@ -9,7 +9,7 @@ import { BriefSlideView, gridTemplate } from "./BriefSlideView";
 
 interface BriefCanvasProps {
   report: Report;
-  prior: Report | null;
+  earlier: readonly Report[];
   brief: Brief;
   slideIndex: number;
   selectedId: string | null;
@@ -26,7 +26,7 @@ const CELLS = Array.from({ length: BRIEF_COLS * BRIEF_ROWS }, (_, index) => inde
 /** The slide being edited: the real rendering plus handles for moving and resizing. */
 export function BriefCanvas({
   report,
-  prior,
+  earlier,
   brief,
   slideIndex,
   selectedId,
@@ -118,8 +118,8 @@ export function BriefCanvas({
           onPointerDown={(event) => startPointer(event, block, "move")}
           onClick={() => onSelect(block.id)}
           onKeyDown={(event) => handleKeyDown(event, block)}
-          className={`absolute inset-0 cursor-move touch-none rounded-lg border-2 bg-transparent outline-none transition-colors ${
-            selected ? "border-primary" : "border-transparent hover:border-slate-300 focus-visible:border-primary"
+          className={`absolute inset-0 cursor-move touch-none rounded-[14px] border-2 bg-transparent outline-none transition-colors ${
+            selected ? "border-brief-accent" : "border-transparent hover:border-brief-faint focus-visible:border-brief-accent"
           }`}
         />
         {warning && (
@@ -136,7 +136,7 @@ export function BriefCanvas({
             tabIndex={-1}
             aria-label={t("brief.resize", { name: label })}
             onPointerDown={(event) => startPointer(event, block, "resize")}
-            className="absolute -bottom-1 -right-1 h-4 w-4 cursor-nwse-resize touch-none rounded-sm border-2 border-white bg-primary"
+            className="absolute -bottom-1 -right-1 h-4 w-4 cursor-nwse-resize touch-none rounded-full border-2 border-white bg-brief-accent"
           />
         )}
       </>
@@ -146,14 +146,14 @@ export function BriefCanvas({
   const underlay = (
     <div aria-hidden className="absolute inset-0 grid" style={gridTemplate}>
       {CELLS.map((cell) => (
-        <div key={cell} className="rounded bg-slate-50/70 outline-1 outline-dashed outline-slate-200" />
+        <div key={cell} className="rounded-md outline-1 outline-dashed outline-brief-line" />
       ))}
     </div>
   );
 
   return (
     <div
-      className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+      className="overflow-hidden rounded-2xl shadow-[0_24px_70px_-20px_rgb(0_0_0_/_0.7)] ring-1 ring-white/10"
       role="group"
       aria-label={t("brief.canvas", { number: slideIndex + 1 })}
       onPointerDown={() => onSelect(null)}
@@ -161,11 +161,12 @@ export function BriefCanvas({
       <SlideStage mode="width">
         <BriefSlideView
           report={report}
-          prior={prior}
+          earlier={earlier}
           brief={brief}
           slideIndex={slideIndex}
           gridRef={gridRef}
-          underlay={underlay}
+          // The grid only helps while arranging, and would otherwise show between the tiles.
+          underlay={selectedId !== null || blocks.length === 0 ? underlay : undefined}
           renderChrome={renderChrome}
           onOverflow={onOverflow}
         />
