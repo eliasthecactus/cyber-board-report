@@ -9,7 +9,7 @@ The source of truth for the types is [`src/types.ts`](../src/types.ts); the
 code that validates and upgrades data is `normalizeReport` in
 [`src/lib/reportFactory.ts`](../src/lib/reportFactory.ts).
 
-## Report (`schemaVersion` 5)
+## Report (`schemaVersion` 6)
 
 | Field | Type | Notes |
 |---|---|---|
@@ -50,6 +50,7 @@ they are rendered, so editing the report updates the brief.
 | `title` | string | Footer title; empty means the default |
 | `audience` | string | Shown above each slide title |
 | `footerNote` | string | Classification, shown in the footer |
+| `theme` | `"midnight"` \| `"daylight"` | Dark for screens, light for paper; older briefs get `midnight` |
 | `slides` | `{ id, title, blocks }[]` | 1 to 5 slides |
 
 Each block is `{ id, type, x, y, w, h, title, options }`. Position and size are
@@ -61,7 +62,7 @@ default heading. `options` depend on the block `type`:
 | `text` | `text` |
 | `headline` | `source`: `highlight` \| `summary` |
 | `stat` | `metric`: see `BriefMetric` in `src/types.ts` |
-| `riskMatrix`, `outlook` | none |
+| `riskMatrix`, `riskTrend`, `outlook` | none |
 | `riskTable` | `count`, `riskIds`, `showRatings`, `showDescription`, `showMitigation`, `showOwner` |
 | `riskMovement` | `showNew`, `showRemoved`, `showWorsened`, `showImproved` |
 | `kpis` | `count`, `kpiIds`, `showChart`, `showTarget` |
@@ -119,6 +120,7 @@ ignore the imported one, or keep both.
 | 3 | `schemaVersion` stored on each report, `hideEmptySlides` added, editable `emergingRisks`, unused `Risk.historicalData` removed |
 | 4 | `explainKpis` and `KPI.explanation` added |
 | 5 | `brief` added, `Risk.mitigation` and `Risk.owner` added |
+| 6 | `Brief.theme` and the `riskTrend` block added |
 
 To change the shape:
 

@@ -45,3 +45,31 @@ export function ensureContrastOnWhite(hex: string, min = 4.5): string {
   }
   return color;
 }
+
+/** Mix `hex` towards white by `amount` (0–1). */
+function lighten(hex: string, amount: number): string {
+  return toHex(channels(hex).map((v) => v + (255 - v) * amount));
+}
+
+/** The colour as an rgba() string, for tints. */
+export function withAlpha(hex: string, alpha: number): string {
+  return `rgba(${channels(hex).join(", ")}, ${alpha})`;
+}
+
+/**
+ * Raise the saturation and lightness of `hex` until it reaches `min` contrast
+ * against a dark `background`, so a deep brand colour still reads on it.
+ */
+export function ensureContrastOnDark(hex: string, background: string, min = 4.5): string {
+  if (contrastRatio(hex, background) >= min) {
+    return hex;
+  }
+  const [r, g, b] = channels(hex);
+  const mean = (r + g + b) / 3;
+  // Stretch the channels away from grey first: plain mixing with white looks washed out.
+  let color = toHex([r, g, b].map((v) => mean + (v - mean) * 2.2 + 40));
+  for (let step = 0; step < 20 && contrastRatio(color, background) < min; step += 1) {
+    color = lighten(color, 0.1);
+  }
+  return color;
+}

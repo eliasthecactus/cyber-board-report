@@ -46,6 +46,7 @@ describe("copyBriefFrom", () => {
       title: "Bericht",
       audience: "VR",
       footerNote: "Vertraulich",
+      theme: "daylight",
       slides: [{ id: "s1", title: "Lage", blocks: [table, text] }],
     },
   });

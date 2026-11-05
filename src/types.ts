@@ -109,6 +109,9 @@ export type BriefMetric =
   | "kpisOffTarget"
   | "openDecisions";
 
+/** The look of the brief: dark for screens, light for paper. */
+export type BriefTheme = "midnight" | "daylight";
+
 export type BriefItemSource = "threatLandscape" | "processItems" | "humanItems" | "technologyItems";
 
 /** The options of each block type. An empty id list means "pick automatically". */
@@ -126,6 +129,7 @@ export interface BriefBlockOptions {
     showOwner: boolean;
   };
   riskMovement: { showNew: boolean; showRemoved: boolean; showWorsened: boolean; showImproved: boolean };
+  riskTrend: Record<string, never>;
   kpis: { count: number; kpiIds: string[]; showChart: boolean; showTarget: boolean };
   incidents: { count: number; minSeverity: Level; showOutcome: boolean };
   initiatives: { count: number; filter: "all" | "needsAttention" };
@@ -168,6 +172,7 @@ export interface Brief {
   audience: string;
   /** Classification or similar, shown in the footer. */
   footerNote: string;
+  theme: BriefTheme;
   slides: BriefSlide[];
 }
 

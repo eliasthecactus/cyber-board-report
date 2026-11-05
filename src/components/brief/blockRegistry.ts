@@ -12,6 +12,7 @@ import {
   Heading,
   Table2,
   Target,
+  TrendingUp,
   Type,
   type LucideIcon,
 } from "lucide-react";
@@ -19,7 +20,13 @@ import type { BriefBlock, BriefBlockOf, BriefBlockType, BriefMetric, Report } fr
 import type { MessageKey, TFunction } from "@/lib/i18n";
 import { BLOCK_SPECS } from "@/lib/briefGrid";
 import { selectIncidents, selectInitiatives, selectKpis, selectRisks } from "@/lib/briefMetrics";
-import { EmergingRisksBlock, RiskMatrixBlock, RiskMovementBlock, RiskTableBlock } from "./blocks/RiskBlocks";
+import {
+  EmergingRisksBlock,
+  RiskMatrixBlock,
+  RiskMovementBlock,
+  RiskTableBlock,
+  RiskTrendBlock,
+} from "./blocks/RiskBlocks";
 import { DecisionsBlock, IncidentsBlock, InitiativesBlock, ItemsBlock, KpisBlock } from "./blocks/ListBlocks";
 import { HeadlineBlock, headlineText, OutlookBlock, StatBlock, TextBlock } from "./blocks/TextBlocks";
 import type { BlockProps } from "./blocks/shared";
@@ -42,8 +49,8 @@ export interface BlockDefinition<T extends BriefBlockType> {
   label: MessageKey;
   Icon: LucideIcon;
   component: ComponentType<BlockProps<T>>;
-  /** "plain" blocks sit directly on the slide, "card" blocks on a tinted surface. */
-  surface: "card" | "plain";
+  /** "hero" blocks stand out in the brand colour, "card" blocks are ordinary tiles. */
+  surface: "card" | "hero";
   /** Heading above the content: always, only when set by the user, or never (stat tiles use their own). */
   heading: "always" | "custom" | "own";
   /** Default heading, when it differs from the palette label. */
@@ -61,7 +68,7 @@ export const BLOCKS: { [T in BriefBlockType]: BlockDefinition<T> } = {
     label: "brief.block.headline",
     Icon: Heading,
     component: HeadlineBlock,
-    surface: "plain",
+    surface: "hero",
     heading: "custom",
     isEmpty: (block, report) => !headlineText(report, block.options.source).trim(),
     fields: [
@@ -136,6 +143,15 @@ export const BLOCKS: { [T in BriefBlockType]: BlockDefinition<T> } = {
       { kind: "toggle", key: "showImproved", label: "brief.movement.improved" },
       { kind: "toggle", key: "showRemoved", label: "brief.movement.removed" },
     ],
+  },
+  riskTrend: {
+    label: "brief.block.riskTrend",
+    Icon: TrendingUp,
+    component: RiskTrendBlock,
+    surface: "card",
+    heading: "always",
+    isEmpty: (_, report) => report.topRisks.length === 0,
+    fields: [],
   },
   emergingRisks: {
     label: "brief.block.emergingRisks",
@@ -237,7 +253,7 @@ export const BLOCKS: { [T in BriefBlockType]: BlockDefinition<T> } = {
     label: "brief.block.decisions",
     Icon: Handshake,
     component: DecisionsBlock,
-    surface: "card",
+    surface: "hero",
     heading: "always",
     isEmpty: (_, report) => report.decisionsRequired.length === 0,
     fields: [count, { kind: "toggle", key: "showRationale", label: "brief.opt.showRationale" }],

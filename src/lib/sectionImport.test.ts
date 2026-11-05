@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normalizeReport } from "./reportFactory";
-import { findPriorReport, sectionPatch } from "./sectionImport";
+import { earlierReports, findPriorReport, sectionPatch } from "./sectionImport";
 
 const report = (quarter: string, year: number, extra = {}) => normalizeReport({ quarter, year, ...extra });
 
@@ -10,6 +10,14 @@ describe("section import", () => {
     const candidates = [report("Q4", 2025), report("Q1", 2026), report("Q3", 2026), current];
     expect(findPriorReport(candidates, current)).toMatchObject({ quarter: "Q1", year: 2026 });
     expect(findPriorReport([current], current)).toBeNull();
+  });
+
+  it("lists earlier reports oldest first, up to the limit", () => {
+    const current = report("Q2", 2026);
+    const candidates = [report("Q1", 2026), report("Q3", 2026), report("Q3", 2025), report("Q4", 2025), current];
+    const periods = (reports: { quarter: string; year: number }[]) => reports.map((r) => `${r.quarter} ${r.year}`);
+    expect(periods(earlierReports(candidates, current))).toEqual(["Q3 2025", "Q4 2025", "Q1 2026"]);
+    expect(periods(earlierReports(candidates, current, 2))).toEqual(["Q4 2025", "Q1 2026"]);
   });
 
   it("copies items with fresh ids", () => {
